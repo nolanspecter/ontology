@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Corporate KB{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+</head>
+<body>
+  <nav>
+    <a href="/app/terms">Corporate KB</a>
+    {% if current_user %}
+      {% if current_user.role in ("editor", "admin") %}<a href="/app/terms/new">New Term</a>{% endif %}
+      {% if current_user.role in ("reviewer", "admin") %}<a href="/app/review">Review Queue</a>{% endif %}
+      <span>{{ current_user.email }} ({{ current_user.role.value }})</span>
+      <form action="/auth/logout" method="post" style="display:inline"><button type="submit">Log out</button></form>
+    {% else %}
+      <a href="/auth/login">Sign in</a>
+    {% endif %}
+  </nav>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

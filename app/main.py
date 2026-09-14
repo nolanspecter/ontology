@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.routers import terms, relations, review, auth as auth_router
@@ -23,6 +24,9 @@ app.include_router(terms.router)
 app.include_router(relations.router)
 app.include_router(review.router)
 app.include_router(auth_router.router)
+
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 @app.get("/health")
