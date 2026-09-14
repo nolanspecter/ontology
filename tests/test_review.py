@@ -159,3 +159,10 @@ def test_only_reviewer_can_approve():
     response = client.post("/review/Cash/approve")
     assert response.status_code == 200
     _clear_auth_override()
+
+
+def test_unauthenticated_request_rejected():
+    apply_constraints()
+    _clear_auth_override()
+    response = client.get("/review/queue")
+    assert response.status_code == 401

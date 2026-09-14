@@ -16,11 +16,11 @@ def sync_user(email: str, groups: list[str]) -> UserOut:
     if existing is not None:
         return existing
     role = _role_from_groups(groups)
-    run_query(
-        "MERGE (u:User {email: $email}) ON CREATE SET u.role = $role",
+    rows = run_query(
+        "MERGE (u:User {email: $email}) ON CREATE SET u.role = $role RETURN u.role AS role",
         email=email, role=role.value,
     )
-    return UserOut(email=email, role=role)
+    return UserOut(email=email, role=Role(rows[0]["role"]))
 
 
 def get_user(email: str) -> UserOut | None:

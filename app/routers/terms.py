@@ -1,12 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from app.models.term import TermCreate, TermOut
+from app.models.user import Role, UserOut
+from app.dependencies import require_role
 from app.services import terms as term_service
 
 router = APIRouter(prefix="/terms", tags=["terms"])
 
 
 @router.post("", response_model=TermOut, status_code=201)
-def create_term(data: TermCreate):
+def create_term(data: TermCreate, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))):
     return term_service.create_term(data)
 
 
