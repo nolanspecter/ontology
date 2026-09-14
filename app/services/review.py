@@ -40,6 +40,71 @@ def submit_edit(name: str, data: EditSubmit) -> None:
     )
 
 
+def approve(name: str, changed_by: str) -> None:
+    draft_rows = run_query(
+        "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(t:Term {name: $name}) "
+        "RETURN d.definition AS new_definition, d.formula AS new_formula, "
+        "t.definition AS old_definition, t.version AS version",
+        name=name,
+    )
+    if draft_rows:
+        row = draft_rows[0]
+        new_version = row["version"] + 1
+        run_query(
+            "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(t:Term {name: $name}) "
+            "SET t.definition = $new_definition, t.formula = $new_formula, "
+            "t.version = $new_version, t.status = 'published' "
+            "DETACH DELETE d",
+            name=name, new_definition=row["new_definition"],
+            new_formula=row["new_formula"], new_version=new_version,
+        )
+        run_query(
+            "MATCH (t:Term {name: $name}) "
+            "CREATE (c:Change {field: 'definition', oldValue: $old, newValue: $new, "
+            "changedBy: $changed_by, changedAt: datetime(), action: 'approve_edit'}) "
+            "CREATE (t)-[:HAS_CHANGE]->(c)",
+            name=name, old=row["old_definition"], new=row["new_definition"], changed_by=changed_by,
+        )
+        return
+
+    rows = run_query(
+        "MATCH (t:Term {name: $name, status: 'pending_review'}) RETURN t.name AS name",
+        name=name,
+    )
+    if not rows:
+        raise LookupError(f"No pending review found for term '{name}'")
+    run_query(
+        "MATCH (t:Term {name: $name}) SET t.status = 'published' "
+        "CREATE (c:Change {field: 'status', oldValue: 'pending_review', newValue: 'published', "
+        "changedBy: $changed_by, changedAt: datetime(), action: 'approve_new'}) "
+        "CREATE (t)-[:HAS_CHANGE]->(c)",
+        name=name, changed_by=changed_by,
+    )
+
+
+def reject(name: str) -> None:
+    deleted = run_query(
+        "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(:Term {name: $name}) "
+        "DETACH DELETE d RETURN count(d) AS deleted",
+        name=name,
+    )
+    if deleted[0]["deleted"] > 0:
+        return
+    run_query(
+        "MATCH (t:Term {name: $name, status: 'pending_review'}) SET t.status = 'draft'",
+        name=name,
+    )
+
+
+def list_changes(name: str) -> list[dict]:
+    return run_query(
+        "MATCH (:Term {name: $name})-[:HAS_CHANGE]->(c:Change) "
+        "RETURN c.field AS field, c.oldValue AS oldValue, c.newValue AS newValue, "
+        "c.changedBy AS changedBy, c.action AS action ORDER BY c.changedAt",
+        name=name,
+    )
+
+
 def get_review_queue() -> list[QueueItem]:
     rows = run_query(
         "MATCH (t:Term {status: 'pending_review'}) "

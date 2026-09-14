@@ -67,3 +67,51 @@ def test_review_queue_lists_new_terms_and_edits():
     kinds = {(item["kind"], item["term_name"]) for item in queue}
     assert ("new_term", "Cash") in kinds
     assert ("edit", "Subaccount") in kinds
+
+
+def test_approve_new_term_publishes_it():
+    apply_constraints()
+    _make_term("Cash")
+    client.post("/terms/Cash/submit")
+    response = client.post("/review/Cash/approve", json={"changed_by": "alice@corp.com"})
+    assert response.status_code == 200
+    assert client.get("/terms/Cash").json()["status"] == "published"
+
+
+def test_approve_edit_merges_and_bumps_version():
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+    client.post(
+        "/terms/Cash/edits",
+        json={"definition": "new def", "formula": None, "expected_version": 1},
+    )
+    client.post("/review/Cash/approve", json={"changed_by": "bob@corp.com"})
+
+    term = client.get("/terms/Cash").json()
+    assert term["definition"] == "new def"
+    assert term["version"] == 2
+    assert term["status"] == "published"
+
+
+def test_reject_edit_leaves_term_untouched():
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+    client.post(
+        "/terms/Cash/edits",
+        json={"definition": "unwanted", "formula": None, "expected_version": 1},
+    )
+    client.post("/review/Cash/reject")
+
+    term = client.get("/terms/Cash").json()
+    assert term["definition"] == "def"
+    assert term["version"] == 1
+
+
+def test_reject_new_term_reverts_to_draft():
+    apply_constraints()
+    _make_term("Cash")
+    client.post("/terms/Cash/submit")
+    client.post("/review/Cash/reject")
+    assert client.get("/terms/Cash").json()["status"] == "draft"

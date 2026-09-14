@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.services import review as review_service
-from app.models.review import EditSubmit, QueueItem
+from app.models.review import EditSubmit, QueueItem, ApproveRequest
 
 router = APIRouter(tags=["review"])
 
@@ -30,3 +30,18 @@ def submit_edit(name: str, data: EditSubmit):
 @router.get("/review/queue", response_model=list[QueueItem])
 def review_queue():
     return review_service.get_review_queue()
+
+
+@router.post("/review/{name}/approve")
+def approve(name: str, data: ApproveRequest):
+    try:
+        review_service.approve(name, changed_by=data.changed_by)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"approved": True}
+
+
+@router.post("/review/{name}/reject")
+def reject(name: str):
+    review_service.reject(name)
+    return {"rejected": True}
