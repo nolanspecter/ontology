@@ -1,6 +1,10 @@
+from unittest.mock import AsyncMock
+from fastapi.testclient import TestClient
+from app.main import app
 from app.services.auth import sync_user, get_user
 from app.models.user import Role
 from app.config import settings
+import app.routers.auth as auth_router
 
 
 def test_sync_user_assigns_role_from_group(monkeypatch):
@@ -35,3 +39,14 @@ def test_sync_user_admin_wins_regardless_of_order(monkeypatch):
 
     user_reversed = sync_user(email="eve@corp.com", groups=["kb-admins", "kb-reviewers"])
     assert user_reversed.role == Role.ADMIN
+
+
+def test_callback_syncs_user_and_sets_session(monkeypatch):
+    fake_token = {"userinfo": {"email": "dana@corp.com", "groups": ["kb-reviewers"]}}
+    monkeypatch.setattr(
+        auth_router.oauth.corp_idp, "authorize_access_token", AsyncMock(return_value=fake_token)
+    )
+    client = TestClient(app)
+    response = client.get("/auth/callback", follow_redirects=False)
+    assert response.status_code in (302, 307)
+    assert "session" in response.cookies
