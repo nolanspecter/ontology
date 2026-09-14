@@ -13,7 +13,3 @@ class QueueItem(BaseModel):
     term_name: str
     definition: str
     formula: str | None
-
-
-class ApproveRequest(BaseModel):
-    changed_by: str

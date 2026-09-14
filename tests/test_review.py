@@ -115,3 +115,47 @@ def test_reject_new_term_reverts_to_draft():
     client.post("/terms/Cash/submit")
     client.post("/review/Cash/reject")
     assert client.get("/terms/Cash").json()["status"] == "draft"
+
+
+from app.main import app
+from app.dependencies import get_current_user
+from app.models.user import Role, UserOut
+
+
+def _as(role: Role):
+    app.dependency_overrides[get_current_user] = lambda: UserOut(email="test@corp.com", role=role)
+
+
+def _clear_auth_override():
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_editor_can_submit_but_reader_cannot():
+    apply_constraints()
+    _make_term("Cash")
+
+    _as(Role.REVIEWER)
+    response = client.post("/terms/Cash/submit")
+    assert response.status_code == 403
+    _clear_auth_override()
+
+    _as(Role.EDITOR)
+    response = client.post("/terms/Cash/submit")
+    assert response.status_code == 200
+    _clear_auth_override()
+
+
+def test_only_reviewer_can_approve():
+    apply_constraints()
+    _make_term("Cash")
+    _as(Role.EDITOR)
+    client.post("/terms/Cash/submit")
+
+    response = client.post("/review/Cash/approve")
+    assert response.status_code == 403
+    _clear_auth_override()
+
+    _as(Role.REVIEWER)
+    response = client.post("/review/Cash/approve")
+    assert response.status_code == 200
+    _clear_auth_override()
