@@ -29,3 +29,9 @@ async def auth_callback(request: Request):
     user = sync_user(email=claims["email"], groups=claims.get("groups", []))
     request.session["user_email"] = user.email
     return RedirectResponse(url="/")
+
+
+@router.post("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/auth/login", status_code=302)
