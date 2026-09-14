@@ -1,6 +1,6 @@
 from app.db import run_query
 from app.services.terms import get_term
-from app.models.review import EditSubmit
+from app.models.review import EditSubmit, QueueItem
 
 
 def submit_new_term(name: str) -> None:
@@ -38,3 +38,14 @@ def submit_edit(name: str, data: EditSubmit) -> None:
         "-[:DRAFT_OF]->(t)",
         name=name, definition=data.definition, formula=data.formula,
     )
+
+
+def get_review_queue() -> list[QueueItem]:
+    rows = run_query(
+        "MATCH (t:Term {status: 'pending_review'}) "
+        "RETURN 'new_term' AS kind, t.name AS term_name, t.definition AS definition, t.formula AS formula "
+        "UNION "
+        "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(t:Term) "
+        "RETURN 'edit' AS kind, t.name AS term_name, d.definition AS definition, d.formula AS formula"
+    )
+    return [QueueItem(**row) for row in rows]

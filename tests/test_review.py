@@ -49,3 +49,21 @@ def test_submit_edit_stale_version_conflict():
         json={"definition": "x", "formula": None, "expected_version": 99},
     )
     assert response.status_code == 409
+
+
+def test_review_queue_lists_new_terms_and_edits():
+    apply_constraints()
+    _make_term("Cash")
+    client.post("/terms/Cash/submit")
+
+    _make_term("Subaccount")
+    _publish("Subaccount")
+    client.post(
+        "/terms/Subaccount/edits",
+        json={"definition": "revised", "formula": None, "expected_version": 1},
+    )
+
+    queue = client.get("/review/queue").json()
+    kinds = {(item["kind"], item["term_name"]) for item in queue}
+    assert ("new_term", "Cash") in kinds
+    assert ("edit", "Subaccount") in kinds

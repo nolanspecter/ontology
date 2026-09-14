@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.services import review as review_service
-from app.models.review import EditSubmit
+from app.models.review import EditSubmit, QueueItem
 
 router = APIRouter(tags=["review"])
 
@@ -25,3 +25,8 @@ def submit_edit(name: str, data: EditSubmit):
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return {"submitted": True}
+
+
+@router.get("/review/queue", response_model=list[QueueItem])
+def review_queue():
+    return review_service.get_review_queue()
