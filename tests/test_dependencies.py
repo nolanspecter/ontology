@@ -3,7 +3,8 @@ from starlette.requests import Request
 from fastapi import HTTPException
 from app.dependencies import get_current_user
 from app.services.auth import sync_user
-from app.models.user import Role
+from app.models.user import Role, UserOut
+from app.web.deps import require_web_role, WebAuthRequired
 
 
 def _request_with_session(session: dict) -> Request:
@@ -29,3 +30,18 @@ def test_get_current_user_returns_synced_user():
 
     assert user.email == "frank@corp.com"
     assert user.role == Role.EDITOR
+
+
+def test_require_web_role_with_no_args_allows_any_authenticated_role():
+    dependency = require_web_role()
+    user = UserOut(email="grace@corp.com", role=Role.EDITOR)
+
+    result = dependency(user=user)
+
+    assert result is user
+
+
+def test_require_web_role_with_no_args_still_blocks_logged_out():
+    dependency = require_web_role()
+    with pytest.raises(WebAuthRequired):
+        dependency(user=None)
