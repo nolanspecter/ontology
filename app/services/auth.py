@@ -4,11 +4,10 @@ from app.models.user import Role, UserOut
 
 
 def _role_from_groups(groups: list[str]) -> Role:
-    for group in groups:
-        if group in settings.admin_groups:
-            return Role.ADMIN
-        if group in settings.reviewer_groups:
-            return Role.REVIEWER
+    if any(g in settings.admin_groups for g in groups):
+        return Role.ADMIN
+    if any(g in settings.reviewer_groups for g in groups):
+        return Role.REVIEWER
     return Role.EDITOR
 
 
@@ -17,7 +16,10 @@ def sync_user(email: str, groups: list[str]) -> UserOut:
     if existing is not None:
         return existing
     role = _role_from_groups(groups)
-    run_query("CREATE (u:User {email: $email, role: $role})", email=email, role=role.value)
+    run_query(
+        "MERGE (u:User {email: $email}) ON CREATE SET u.role = $role",
+        email=email, role=role.value,
+    )
     return UserOut(email=email, role=role)
 
 
