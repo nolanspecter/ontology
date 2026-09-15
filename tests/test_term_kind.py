@@ -1,9 +1,9 @@
 from app.models.term_kind import TERM_KINDS
 
 
-def test_person_kind_has_required_title_and_optional_department():
+def test_person_kind_has_title_and_department_both_optional():
     person_props = {p.name: p.required for p in TERM_KINDS["Person"]}
-    assert person_props == {"title": True, "department": False}
+    assert person_props == {"title": False, "department": False}
 
 
 def test_business_kind_has_no_required_properties():

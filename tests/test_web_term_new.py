@@ -257,7 +257,7 @@ def test_new_term_form_shows_kind_dropdown():
     _logout()
 
 
-def test_new_term_form_creates_term_with_kind_and_required_property():
+def test_new_term_form_creates_term_with_kind_and_property():
     from app.services import terms as term_service
 
     apply_constraints()
@@ -276,17 +276,22 @@ def test_new_term_form_creates_term_with_kind_and_required_property():
     assert term.properties == {"title": "CFO"}
 
 
-def test_new_term_form_missing_required_kind_property_shows_error():
+def test_new_term_form_kind_with_no_properties_filled_succeeds():
+    from app.services import terms as term_service
+
     apply_constraints()
     _login_as(Role.EDITOR)
-
     response = client.post(
         "/app/terms/new",
         data={"name": "Alice Smith", "definition": "A person", "formula": "", "kind": "Person"},
+        follow_redirects=False,
     )
-    assert response.status_code == 200
-    assert "missing required" in response.text.lower()
     _logout()
+
+    assert response.status_code == 303
+    term = term_service.get_term("Alice Smith")
+    assert term.kind == "Person"
+    assert term.properties == {}
 
 
 def test_new_term_form_accepts_free_extra_property():

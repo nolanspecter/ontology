@@ -87,7 +87,7 @@ def test_create_term_without_created_by_defaults_to_none():
     assert created.created_by is None
 
 
-def test_term_create_with_valid_kind_and_required_property():
+def test_term_create_with_valid_kind_and_property():
     from app.models.term import TermCreate
 
     term = TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"})
@@ -106,15 +106,12 @@ def test_term_create_rejects_unknown_kind():
         assert "unknown kind" in str(e)
 
 
-def test_term_create_rejects_missing_required_property():
-    from pydantic import ValidationError
+def test_term_create_with_kind_and_no_properties_is_valid():
     from app.models.term import TermCreate
 
-    try:
-        TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={})
-        assert False, "expected ValidationError"
-    except ValidationError as e:
-        assert "missing required property: title" in str(e)
+    term = TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={})
+    assert term.kind == "Person"
+    assert term.properties == {}
 
 
 def test_term_create_rejects_properties_without_kind():

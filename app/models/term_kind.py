@@ -8,7 +8,7 @@ class PropertyDef(BaseModel):
 
 TERM_KINDS: dict[str, list[PropertyDef]] = {
     "Person": [
-        PropertyDef(name="title", required=True),
+        PropertyDef(name="title"),
         PropertyDef(name="department"),
     ],
     "Business": [
