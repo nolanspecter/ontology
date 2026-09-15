@@ -228,6 +228,89 @@ def test_term_create_rejects_properties_colliding_with_reserved_field_names():
         assert "status" in str(e)
 
 
+def test_get_term_returns_category():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    fetched = term_service.get_term("Cash")
+    assert fetched.category == "Liquidity"
+
+
+def test_get_term_without_category_has_none_category():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+
+    fetched = term_service.get_term("Cash")
+    assert fetched.category is None
+
+
+def test_list_terms_includes_category_field():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    results = term_service.list_terms()
+    cash = next(t for t in results if t.name == "Cash")
+    assert cash.category == "Liquidity"
+
+
+def test_set_category_replaces_existing():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    term_service.set_category("Cash", "Working Capital")
+
+    assert term_service.get_term("Cash").category == "Working Capital"
+    from app.db import run_query
+    rows = run_query(
+        "MATCH (:Term {name: 'Cash'})-[:HAS_CATEGORY]->(c:Category) RETURN c.name AS name"
+    )
+    assert [r["name"] for r in rows] == ["Working Capital"]
+
+
+def test_set_category_none_clears_it():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    term_service.set_category("Cash", None)
+
+    assert term_service.get_term("Cash").category is None
+
+
+def test_json_api_set_category():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+
+    response = client.put("/terms/Cash/category", json={"category": "Liquidity"})
+    assert response.status_code == 200
+
+    assert client.get("/terms/Cash").json()["category"] == "Liquidity"
+
+
+def test_json_api_set_category_404_on_missing_term():
+    response = client.put("/terms/DoesNotExist/category", json={"category": "Liquidity"})
+    assert response.status_code == 404
+
+
+def test_json_api_delete_category():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    response = client.delete("/terms/Cash/category")
+    assert response.status_code == 200
+
+    assert client.get("/terms/Cash").json()["category"] is None
+
+
+def test_json_api_delete_category_404_on_missing_term():
+    response = client.delete("/terms/DoesNotExist/category")
+    assert response.status_code == 404
+
+
 def test_json_api_rejects_properties_forging_status_and_created_by():
     apply_constraints()
     response = client.post(

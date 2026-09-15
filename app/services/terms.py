@@ -32,6 +32,7 @@ def _term_out_from_row(row: dict) -> TermOut:
         created_by=row["created_by"],
         kind=kind,
         properties=properties,
+        category=row.get("category"),
     )
 
 
@@ -71,9 +72,11 @@ def delete_term(name: str) -> None:
 
 def get_term(name: str) -> TermOut | None:
     rows = run_query(
-        "MATCH (t:Term {name: $name}) RETURN t.name AS name, t.definition AS definition, "
+        "MATCH (t:Term {name: $name}) "
+        "OPTIONAL MATCH (t)-[:HAS_CATEGORY]->(c:Category) "
+        "RETURN t.name AS name, t.definition AS definition, "
         "t.formula AS formula, t.status AS status, t.version AS version, t.createdBy AS created_by, "
-        "labels(t) AS labels, properties(t) AS props",
+        "labels(t) AS labels, properties(t) AS props, c.name AS category",
         name=name,
     )
     return _term_out_from_row(rows[0]) if rows else None
@@ -86,6 +89,15 @@ def attach_category(term_name: str, category_name: str) -> None:
         "MERGE (t)-[:HAS_CATEGORY]->(c)",
         term_name=term_name, category_name=category_name,
     )
+
+
+def set_category(term_name: str, category_name: str | None) -> None:
+    run_query(
+        "MATCH (t:Term {name: $term_name})-[r:HAS_CATEGORY]->() DELETE r",
+        term_name=term_name,
+    )
+    if category_name:
+        attach_category(term_name, category_name)
 
 
 def create_relation(source: str, target: str, relation_type: str) -> None:
@@ -126,9 +138,10 @@ def list_terms(q: str | None = None, category: str | None = None, status: str | 
         "WHERE ($q IS NULL OR toLower(t.name) CONTAINS toLower($q) OR toLower(t.definition) CONTAINS toLower($q)) "
         "AND ($status IS NULL OR t.status = $status) "
         "AND ($category IS NULL OR EXISTS { MATCH (t)-[:HAS_CATEGORY]->(c:Category {name: $category}) }) "
+        "OPTIONAL MATCH (t)-[:HAS_CATEGORY]->(cat:Category) "
         "RETURN t.name AS name, t.definition AS definition, t.formula AS formula, "
         "t.status AS status, t.version AS version, t.createdBy AS created_by, "
-        "labels(t) AS labels, properties(t) AS props ORDER BY t.name",
+        "labels(t) AS labels, properties(t) AS props, cat.name AS category ORDER BY t.name",
         q=q, category=category, status=status,
     )
     return [_term_out_from_row(row) for row in rows]

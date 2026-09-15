@@ -227,6 +227,7 @@ def term_detail(name: str, request: Request, user: UserOut = Depends(require_web
             "relation_types": term_service.list_relation_types(),
             "pending_edit": pending_edit,
             "changes": changes,
+            "categories": term_service.list_categories(),
         },
     )
 
@@ -403,4 +404,35 @@ def remove_relation_page(
             request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
         )
     term_service.remove_relation(name, target, relation_type)
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/category")
+def set_category_page(
+    name: str,
+    request: Request,
+    category: str = Form(""),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    term_service.set_category(name, category or None)
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/category/remove")
+def remove_category_page(
+    name: str,
+    request: Request,
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    term_service.set_category(name, None)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)

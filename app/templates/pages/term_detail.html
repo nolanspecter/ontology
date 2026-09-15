@@ -4,6 +4,15 @@
 <p>{{ term.definition }}</p>
 {% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
 {% if term.kind %}<p><span class="badge">{{ term.kind }}</span></p>{% endif %}
+{% if term.category %}
+<p>Category: <span class="badge">{{ term.category }}</span>
+  {% if current_user.role in ("editor", "admin") %}
+  <form method="post" action="/app/terms/{{ term.name }}/category/remove" style="display:inline">
+    <button type="submit" class="btn-ghost btn-icon" aria-label="Remove category {{ term.category }}">&times;</button>
+  </form>
+  {% endif %}
+</p>
+{% endif %}
 {% if term.properties %}
 <ul>
 {% for key, value in term.properties.items() %}
@@ -56,6 +65,15 @@
   <button type="submit">Add relation</button>
 </form>
 {% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}
+
+<h2>{{ "Change category" if term.category else "Set category" }}</h2>
+<form method="post" action="/app/terms/{{ term.name }}/category">
+  <input type="text" name="category" list="category-options" value="{{ term.category or '' }}">
+  <datalist id="category-options">
+    {% for c in categories %}<option value="{{ c }}">{% endfor %}
+  </datalist>
+  <button type="submit">Save category</button>
+</form>
 {% endif %}
 
 <h2>History</h2>

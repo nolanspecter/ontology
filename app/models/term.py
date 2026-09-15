@@ -53,6 +53,11 @@ class TermOut(BaseModel):
     created_by: str | None = None
     kind: str | None = None
     properties: dict[str, str] = Field(default_factory=dict)
+    category: str | None = None
+
+
+class CategoryUpdate(BaseModel):
+    category: str | None = None
 
 
 class PublicTermOut(BaseModel):

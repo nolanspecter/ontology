@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.models.term import TermCreate, TermOut
+from app.models.term import TermCreate, TermOut, CategoryUpdate
 from app.models.user import Role, UserOut
 from app.dependencies import require_role
 from app.services import terms as term_service
@@ -23,3 +23,21 @@ def get_term(name: str):
     if term is None:
         raise HTTPException(status_code=404, detail="Term not found")
     return term
+
+
+@router.put("/{name}/category")
+def set_category(
+    name: str, data: CategoryUpdate, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))
+):
+    if term_service.get_term(name) is None:
+        raise HTTPException(status_code=404, detail="Term not found")
+    term_service.set_category(name, data.category)
+    return {"updated": True}
+
+
+@router.delete("/{name}/category")
+def delete_category(name: str, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))):
+    if term_service.get_term(name) is None:
+        raise HTTPException(status_code=404, detail="Term not found")
+    term_service.set_category(name, None)
+    return {"deleted": True}
