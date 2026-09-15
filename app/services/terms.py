@@ -1,10 +1,10 @@
 from app.db import run_query
-from app.models.term import TermCreate, TermOut
+from app.models.term import TermCreate, TermOut, RESERVED_PROPERTY_FIELDS
 from app.models.term_kind import TERM_KINDS
 from app.models.relation import RelatedTermOut, validate_relation_type
 
 BUILTIN_RELATION_TYPES = {"COMPUTED_FROM", "PART_OF", "OPPOSITE_OF", "SYNONYM_OF", "RELATED_TO"}
-_BASE_FIELDS = {"name", "definition", "formula", "status", "version", "createdBy"}
+_BASE_FIELDS = RESERVED_PROPERTY_FIELDS
 
 
 def _term_out_from_row(row: dict) -> TermOut:

@@ -214,3 +214,34 @@ def test_json_api_round_trips_kind_and_properties():
     response = client.get("/terms/Alice Smith")
     assert response.json()["kind"] == "Person"
     assert response.json()["properties"] == {"title": "CFO"}
+
+
+def test_term_create_rejects_properties_colliding_with_reserved_field_names():
+    from pydantic import ValidationError
+    from app.models.term import TermCreate
+
+    try:
+        TermCreate(
+            name="Alice Smith", definition="A person", kind="Person",
+            properties={"title": "CFO", "status": "published"},
+        )
+        assert False, "expected ValidationError"
+    except ValidationError as e:
+        assert "reserved field name" in str(e)
+        assert "status" in str(e)
+
+
+def test_json_api_rejects_properties_forging_status_and_created_by():
+    apply_constraints()
+    response = client.post(
+        "/terms",
+        json={
+            "name": "Alice Smith", "definition": "A person", "formula": None,
+            "kind": "Person",
+            "properties": {"title": "CFO", "status": "published", "createdBy": "someone-else"},
+        },
+    )
+    assert response.status_code == 422
+
+    response = client.get("/terms/Alice Smith")
+    assert response.status_code == 404

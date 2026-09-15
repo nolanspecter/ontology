@@ -2,6 +2,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Literal
 from app.models.term_kind import TERM_KINDS
 
+# System/base fields every term node carries. Kind properties may never collide
+# with these — a colliding key would otherwise let a caller forge status/createdBy
+# via the properties map. Shared with app/services/terms.py (_BASE_FIELDS there)
+# so the write path and this validator can't silently drift apart.
+RESERVED_PROPERTY_FIELDS = {"name", "definition", "formula", "status", "version", "createdBy"}
+
 
 class TermCreate(BaseModel):
     name: str = Field(min_length=1)
@@ -25,6 +31,9 @@ class TermCreate(BaseModel):
             return self
         if self.kind not in TERM_KINDS:
             raise ValueError(f"unknown kind '{self.kind}'")
+        collisions = set(self.properties) & RESERVED_PROPERTY_FIELDS
+        if collisions:
+            raise ValueError(f"properties cannot use reserved field name(s): {', '.join(sorted(collisions))}")
         missing = [
             p.name for p in TERM_KINDS[self.kind]
             if p.required and not self.properties.get(p.name)
