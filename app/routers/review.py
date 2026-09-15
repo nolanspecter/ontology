@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.services import review as review_service
-from app.models.review import EditSubmit, QueueItem
+from app.models.review import EditSubmit, QueueItem, RejectRequest
 from app.models.user import Role, UserOut
 from app.dependencies import require_role
 
@@ -46,6 +46,6 @@ def approve(name: str, user: UserOut = Depends(require_role(Role.REVIEWER, Role.
 
 
 @router.post("/review/{name}/reject")
-def reject(name: str, user: UserOut = Depends(require_role(Role.REVIEWER, Role.ADMIN))):
-    review_service.reject(name)
+def reject(name: str, data: RejectRequest, user: UserOut = Depends(require_role(Role.REVIEWER, Role.ADMIN))):
+    review_service.reject(name, changed_by=user.email, reason=data.reason)
     return {"rejected": True}

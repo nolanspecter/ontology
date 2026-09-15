@@ -82,17 +82,39 @@ def approve(name: str, changed_by: str) -> None:
     )
 
 
-def reject(name: str) -> None:
-    deleted = run_query(
-        "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(:Term {name: $name}) "
-        "DETACH DELETE d RETURN count(d) AS deleted",
+def reject(name: str, changed_by: str, reason: str) -> None:
+    draft_rows = run_query(
+        "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(t:Term {name: $name}) "
+        "RETURN d.definition AS proposed_definition, t.definition AS current_definition",
         name=name,
     )
-    if deleted[0]["deleted"] > 0:
+    if draft_rows:
+        row = draft_rows[0]
+        run_query(
+            "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(:Term {name: $name}) "
+            "DETACH DELETE d",
+            name=name,
+        )
+        run_query(
+            "MATCH (t:Term {name: $name}) "
+            "CREATE (c:Change {field: 'definition', oldValue: $current, newValue: $proposed, "
+            "changedBy: $changed_by, changedAt: datetime(), action: 'reject_edit', reason: $reason}) "
+            "CREATE (t)-[:HAS_CHANGE]->(c)",
+            name=name, current=row["current_definition"], proposed=row["proposed_definition"],
+            changed_by=changed_by, reason=reason,
+        )
         return
+
     run_query(
         "MATCH (t:Term {name: $name, status: 'pending_review'}) SET t.status = 'draft'",
         name=name,
+    )
+    run_query(
+        "MATCH (t:Term {name: $name}) "
+        "CREATE (c:Change {field: 'status', oldValue: 'pending_review', newValue: 'draft', "
+        "changedBy: $changed_by, changedAt: datetime(), action: 'reject_new', reason: $reason}) "
+        "CREATE (t)-[:HAS_CHANGE]->(c)",
+        name=name, changed_by=changed_by, reason=reason,
     )
 
 
@@ -100,7 +122,7 @@ def list_changes(name: str) -> list[dict]:
     return run_query(
         "MATCH (:Term {name: $name})-[:HAS_CHANGE]->(c:Change) "
         "RETURN c.field AS field, c.oldValue AS oldValue, c.newValue AS newValue, "
-        "c.changedBy AS changedBy, c.action AS action, c.changedAt AS changedAt ORDER BY c.changedAt",
+        "c.changedBy AS changedBy, c.action AS action, c.reason AS reason, c.changedAt AS changedAt ORDER BY c.changedAt",
         name=name,
     )
 

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 from app.schema import apply_constraints
+from app.services import review as review_service
 
 client = TestClient(app)
 
@@ -140,7 +141,7 @@ def test_reject_edit_leaves_term_untouched():
         "/terms/Cash/edits",
         json={"definition": "unwanted", "formula": None, "expected_version": 1},
     )
-    client.post("/review/Cash/reject")
+    client.post("/review/Cash/reject", json={"reason": "no longer needed"})
 
     term = client.get("/terms/Cash").json()
     assert term["definition"] == "def"
@@ -151,7 +152,7 @@ def test_reject_new_term_reverts_to_draft():
     apply_constraints()
     _make_term("Cash")
     client.post("/terms/Cash/submit")
-    client.post("/review/Cash/reject")
+    client.post("/review/Cash/reject", json={"reason": "no longer needed"})
     assert client.get("/terms/Cash").json()["status"] == "draft"
 
 
@@ -204,3 +205,17 @@ def test_unauthenticated_request_rejected():
     _clear_auth_override()
     response = client.get("/review/queue")
     assert response.status_code == 401
+
+
+def test_reject_edit_records_change_with_reason():
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+    client.post("/terms/Cash/edits", json={"definition": "unwanted", "formula": None, "expected_version": 1})
+
+    response = client.post("/review/Cash/reject", json={"reason": "not accurate"})
+    assert response.status_code == 200
+
+    changes = review_service.list_changes("Cash")
+    assert changes[-1]["action"] == "reject_edit"
+    assert changes[-1]["reason"] == "not accurate"

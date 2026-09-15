@@ -13,3 +13,7 @@ class QueueItem(BaseModel):
     term_name: str
     definition: str
     formula: str | None
+
+
+class RejectRequest(BaseModel):
+    reason: str
