@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     oidc_server_metadata_url: str = ""
     session_secret_key: str = "dev-secret-change-in-production"
     dev_login_password: str = "dev"
+    mcp_host: str = "127.0.0.1"
+    mcp_port: int = 8001
 
     class Config:
         env_file = ".env"

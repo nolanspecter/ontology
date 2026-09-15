@@ -1,9 +1,20 @@
 import pytest
 from fastmcp import Client
+from app import mcp_server
 from app.mcp_server import mcp
 from app.main import app as main_app
+from app.config import settings
 from app.schema import apply_constraints
 from app.db import run_query
+
+
+def test_mcp_server_main_runs_http_transport_from_settings(monkeypatch):
+    calls = []
+    monkeypatch.setattr(mcp_server.mcp, "run", lambda **kwargs: calls.append(kwargs))
+
+    mcp_server.main()
+
+    assert calls == [{"transport": "http", "host": settings.mcp_host, "port": settings.mcp_port}]
 
 
 @pytest.mark.asyncio
