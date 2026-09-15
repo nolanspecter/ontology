@@ -168,7 +168,7 @@ def test_relation_type_field_is_a_dropdown_of_existing_types():
     _login_as(Role.EDITOR)
 
     response = client.get("/app/terms/Cash")
-    assert '<select name="relation_type">' in response.text
+    assert '<select name="relation_type" id="relation-type-select">' in response.text
     assert '<option value="COMPUTED_FROM">COMPUTED_FROM</option>' in response.text
     assert 'list="relation-type-options"' not in response.text
     _logout()

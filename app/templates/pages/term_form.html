@@ -28,10 +28,10 @@
       {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
     </select>
   </label>
-  <select name="relation_type">
+  <select name="relation_type" id="relation-type-select">
     {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
   </select>
-  <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN"></label>
+  <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="document.getElementById('relation-type-select').disabled = this.value.length > 0"></label>
   {% endif %}
 
   <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
