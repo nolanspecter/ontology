@@ -24,3 +24,46 @@ def test_public_api_shows_published_terms():
     response = public_client.get("/terms/Cash")
     assert response.status_code == 200
     assert response.json()["definition"] == "Tiền mặt"
+
+
+def test_public_api_shows_kind_and_properties_on_published_terms():
+    apply_constraints()
+    main_client.post(
+        "/terms",
+        json={
+            "name": "Jane Doe",
+            "definition": "CFO",
+            "kind": "Person",
+            "properties": {"title": "CFO"},
+        },
+    )
+    from app.db import run_query
+    run_query("MATCH (t:Term {name: 'Jane Doe'}) SET t.status = 'published'")
+
+    response = public_client.get("/terms/Jane Doe")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "Person"
+    assert body["properties"] == {"title": "CFO"}
+
+
+def test_public_api_related_filters_on_both_sides_publication():
+    apply_constraints()
+    main_client.post("/terms", json={"name": "A", "definition": "a"})
+    main_client.post("/terms", json={"name": "B", "definition": "b"})
+    main_client.post("/terms/A/relations", json={"target": "B", "relation_type": "RELATED_TO"})
+
+    from app.db import run_query
+
+    # both draft -> hidden
+    assert public_client.get("/terms/A/related").json() == []
+
+    # source published, target still draft -> still hidden
+    run_query("MATCH (t:Term {name: 'A'}) SET t.status = 'published'")
+    assert public_client.get("/terms/A/related").json() == []
+
+    # both published -> relation appears
+    run_query("MATCH (t:Term {name: 'B'}) SET t.status = 'published'")
+    response = public_client.get("/terms/A/related")
+    assert response.status_code == 200
+    assert response.json() == [{"name": "B", "relation_type": "RELATED_TO"}]
