@@ -1,5 +1,9 @@
 {% for t in results %}
-<li><a href="/app/terms/{{ t.name }}">{{ t.name }}</a> — {{ t.definition }} <span class="badge badge-{{ t.status }}">{{ t.status }}</span></li>
+<li><a href="/app/terms/{{ t.name }}">{{ t.name }}</a> — {{ t.definition }} <span class="badge badge-{{ t.status }}">{{ t.status }}</span>
+  {% if current_user.role == "admin" %}
+  <a href="/app/terms/{{ t.name }}/delete" class="btn btn-ghost btn-icon" aria-label="Delete {{ t.name }}">&times;</a>
+  {% endif %}
+</li>
 {% else %}
 <li>No terms match.</li>
 {% endfor %}

@@ -120,21 +120,21 @@ button, input[type="submit"], a.btn {
 }
 a.btn:hover { text-decoration: none; }
 button:hover, input[type="submit"]:hover, a.btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-button.btn-ghost {
+button.btn-ghost, a.btn-ghost {
   background: transparent;
   color: var(--text-muted);
   border-color: var(--border);
   font-weight: 500;
 }
-button.btn-ghost:hover { background: var(--neutral-bg); color: var(--text); }
-button.btn-icon {
+button.btn-ghost:hover, a.btn-ghost:hover { background: var(--neutral-bg); color: var(--text); }
+button.btn-icon, a.btn-icon {
   padding: 0 var(--space-2);
   line-height: 1.6;
   font-size: 1rem;
   border-radius: 999px;
   border-color: transparent;
 }
-button.btn-icon:hover { color: var(--danger); background: var(--danger-bg); }
+button.btn-icon:hover, a.btn-icon:hover { color: var(--danger); background: var(--danger-bg); }
 
 .btn-danger {
   background: var(--danger-bg);

@@ -113,3 +113,23 @@ def test_search_shows_submitted_term_to_everyone():
     response = client.get("/app/terms")
     assert "AliceTerm" in response.text
     _logout()
+
+
+def test_search_results_show_delete_link_for_admin():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    _login_as(Role.ADMIN)
+
+    response = client.get("/app/terms")
+    assert '/app/terms/Cash/delete' in response.text
+    _logout()
+
+
+def test_search_results_hide_delete_link_for_editor():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms")
+    assert '/app/terms/Cash/delete' not in response.text
+    _logout()
