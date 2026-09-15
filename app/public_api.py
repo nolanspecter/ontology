@@ -20,5 +20,5 @@ def list_related(name: str):
 
 
 @public_app.get("/search", response_model=list[TermSearchResult])
-def search_term(q: str = Query(min_length=1)):
+def search_term(q: str = Query(min_length=1, max_length=200)):
     return term_service.search_published_terms(q)

@@ -9,6 +9,10 @@ _BASE_FIELDS = RESERVED_PROPERTY_FIELDS
 
 # Lucene syntax characters that need escaping so free-text search input can't
 # be misread as a query operator (and doesn't 500 on things like "R&D" or "a:b").
+# Keyword operators (AND/OR/NOT/TO) are intentionally left alone — same
+# residual limitation as Lucene's own QueryParserBase.escape() utility, which
+# this mirrors; the published-only filter below is independent of Lucene
+# parsing either way, so this can't leak data, just occasionally mis-rank.
 _LUCENE_SPECIAL_CHARS = re.compile(r'([+\-&|!(){}\[\]^"~*?:\\/])')
 
 
