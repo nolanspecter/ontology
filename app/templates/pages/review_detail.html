@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Review: {{ item.term_name }} <span class="badge">{{ item.kind }}</span></h1>
+
+{% if current %}
+<table>
+  <tr><th></th><th>Current (published)</th><th>Proposed</th></tr>
+  <tr><td>Definition</td><td>{{ current.definition }}</td><td>{{ item.definition }}</td></tr>
+  <tr><td>Formula</td><td>{{ current.formula or "" }}</td><td>{{ item.formula or "" }}</td></tr>
+</table>
+{% else %}
+<p>Definition: {{ item.definition }}</p>
+<p>Formula: {{ item.formula or "—" }}</p>
+{% endif %}
+
+<form method="post" action="/app/review/{{ item.term_name }}/approve">
+  <button type="submit">Approve</button>
+</form>
+<form method="post" action="/app/review/{{ item.term_name }}/reject">
+  <input type="text" name="reason" placeholder="Reason" required>
+  <button type="submit">Reject</button>
+</form>
+{% endblock %}

@@ -3,6 +3,7 @@ from app.web.templates import templates
 from app.web.deps import require_web_role
 from app.models.user import Role, UserOut
 from app.services import review as review_service
+from app.services import terms as term_service
 
 # Router-level `require_web_role()` (no args) makes auth structural: every route added to
 # this router is guaranteed to require at least a logged-in user, even if its author forgets
@@ -17,3 +18,14 @@ router = APIRouter(prefix="/app/review", tags=["web-review"], dependencies=[Depe
 def review_queue_page(request: Request, user: UserOut = Depends(require_web_role(Role.REVIEWER, Role.ADMIN))):
     queue = review_service.get_review_queue()
     return templates.TemplateResponse(request, "pages/review_queue.html", {"current_user": user, "queue": queue})
+
+
+@router.get("/{name}")
+def review_detail_page(name: str, request: Request, user: UserOut = Depends(require_web_role(Role.REVIEWER, Role.ADMIN))):
+    item = review_service.get_queue_item(name)
+    if item is None:
+        return templates.TemplateResponse(request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404)
+    current = term_service.get_term(name) if item.kind == "edit" else None
+    return templates.TemplateResponse(
+        request, "pages/review_detail.html", {"current_user": user, "item": item, "current": current}
+    )
