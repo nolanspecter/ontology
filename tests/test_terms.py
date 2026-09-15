@@ -55,3 +55,22 @@ def test_list_categories_returns_attached_categories():
     response = client.get("/categories")
     assert response.status_code == 200
     assert response.json() == ["Liquidity"]
+
+
+def test_create_term_stores_created_by():
+    apply_constraints()
+    from app.models.term import TermCreate
+
+    created = term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="editor@corp.com")
+    assert created.created_by == "editor@corp.com"
+
+    fetched = term_service.get_term("Cash")
+    assert fetched.created_by == "editor@corp.com"
+
+
+def test_create_term_without_created_by_defaults_to_none():
+    apply_constraints()
+    from app.models.term import TermCreate
+
+    created = term_service.create_term(TermCreate(name="Cash", definition="Money"))
+    assert created.created_by is None

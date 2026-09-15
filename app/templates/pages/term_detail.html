@@ -20,7 +20,9 @@
 
 <h2>Add relation</h2>
 <form method="post" action="/app/terms/{{ term.name }}/relations">
-  <input type="text" name="target" placeholder="Target term name" required>
+  <select name="target">
+    {% for t in other_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+  </select>
   <select name="relation_type">
     <option value="COMPUTED_FROM">COMPUTED_FROM</option>
     <option value="PART_OF">PART_OF</option>

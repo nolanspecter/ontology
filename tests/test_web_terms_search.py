@@ -8,8 +8,8 @@ from app.services import terms as term_service
 client = TestClient(app)
 
 
-def _login_as(role):
-    app.dependency_overrides[get_web_user] = lambda: UserOut(email="u@corp.com", role=role)
+def _login_as(role, email="u@corp.com"):
+    app.dependency_overrides[get_web_user] = lambda: UserOut(email=email, role=role)
 
 
 def _logout():
@@ -65,4 +65,51 @@ def test_search_htmx_request_honors_combined_query_and_category():
     assert response.status_code == 200
     assert "Cash Flow" in response.text
     assert "Cash</" not in response.text  # plain "Cash" filtered out by category
+    _logout()
+
+
+def test_search_hides_other_users_drafts():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+    _logout()
+
+    _login_as(Role.EDITOR, email="bob@corp.com")
+    response = client.get("/app/terms")
+    assert "AliceDraft" not in response.text
+    _logout()
+
+
+def test_search_shows_own_drafts():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+
+    response = client.get("/app/terms")
+    assert "AliceDraft" in response.text
+    _logout()
+
+
+def test_search_shows_admin_all_drafts():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+    _logout()
+
+    _login_as(Role.ADMIN, email="admin@corp.com")
+    response = client.get("/app/terms")
+    assert "AliceDraft" in response.text
+    _logout()
+
+
+def test_search_shows_submitted_term_to_everyone():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceTerm", "definition": "d", "formula": ""})
+    client.post("/app/terms/AliceTerm/submit")
+    _logout()
+
+    _login_as(Role.EDITOR, email="bob@corp.com")
+    response = client.get("/app/terms")
+    assert "AliceTerm" in response.text
     _logout()

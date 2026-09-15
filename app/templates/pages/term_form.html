@@ -15,6 +15,28 @@
   {% if errors and errors.definition %}<p class="error">{{ errors.definition }}</p>{% endif %}
 
   <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else (term.formula if term and term.formula else '') }}"></label>
+
+  {% if not term %}
+  <label>Category (optional) <input type="text" name="category" list="category-options" value="{{ values.category if values else '' }}"></label>
+  <datalist id="category-options">
+    {% for c in categories %}<option value="{{ c }}">{% endfor %}
+  </datalist>
+
+  <label>Related to (optional)
+    <select name="target">
+      <option value="">— none —</option>
+      {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <select name="relation_type">
+    <option value="COMPUTED_FROM">COMPUTED_FROM</option>
+    <option value="PART_OF">PART_OF</option>
+    <option value="OPPOSITE_OF">OPPOSITE_OF</option>
+    <option value="SYNONYM_OF">SYNONYM_OF</option>
+    <option value="RELATED_TO">RELATED_TO</option>
+  </select>
+  {% endif %}
+
   <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
 </form>
 {% endblock %}

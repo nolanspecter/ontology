@@ -21,3 +21,4 @@ class TermOut(BaseModel):
     formula: str | None
     status: Literal["draft", "pending_review", "published"]
     version: int
+    created_by: str | None = None

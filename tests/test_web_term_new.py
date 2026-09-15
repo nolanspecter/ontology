@@ -93,3 +93,97 @@ def test_submit_for_review_404s_for_unknown_term():
     response = client.post("/app/terms/DoesNotExist/submit")
     assert response.status_code == 404
     _logout()
+
+
+def test_new_term_form_records_creator():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    assert term_service.get_term("Cash").created_by == "u@corp.com"
+
+
+def test_new_term_form_attaches_category_when_given():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/new",
+        data={"name": "Cash", "definition": "Money", "formula": "", "category": "Liquidity"},
+    )
+    _logout()
+
+    assert term_service.list_categories() == ["Liquidity"]
+    assert [t.name for t in term_service.list_terms(category="Liquidity")] == ["Cash"]
+
+
+def test_new_term_form_without_category_creates_term_fine():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    _logout()
+
+
+def test_new_term_form_declares_relation_when_target_given():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    client.post(
+        "/app/terms/new",
+        data={
+            "name": "Receivable Cash",
+            "definition": "Cash owed to us",
+            "formula": "",
+            "target": "Cash",
+            "relation_type": "COMPUTED_FROM",
+        },
+    )
+    _logout()
+
+    related = term_service.list_related("Receivable Cash")
+    assert [(r.name, r.relation_type.value) for r in related] == [("Cash", "COMPUTED_FROM")]
+
+
+def test_new_term_form_without_target_creates_term_with_no_relations():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    assert term_service.list_related("Cash") == []
+
+
+def test_new_term_form_unknown_relation_target_shows_error_but_keeps_term():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Cash",
+            "definition": "Money",
+            "formula": "",
+            "target": "DoesNotExist",
+            "relation_type": "COMPUTED_FROM",
+        },
+        follow_redirects=False,
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert "not found" in response.text.lower()
+    assert term_service.get_term("Cash") is not None
+    assert term_service.list_related("Cash") == []

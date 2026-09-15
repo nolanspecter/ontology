@@ -9,8 +9,8 @@ from app.models.user import Role, UserOut
 client = TestClient(app)
 
 
-def _login_as(role):
-    app.dependency_overrides[get_web_user] = lambda: UserOut(email="u@corp.com", role=role)
+def _login_as(role, email="u@corp.com"):
+    app.dependency_overrides[get_web_user] = lambda: UserOut(email=email, role=role)
 
 
 def _logout():
@@ -35,4 +35,52 @@ def test_term_detail_page_404_for_unknown_term():
     _login_as(Role.EDITOR)
     response = client.get("/app/terms/Nope")
     assert response.status_code == 404
+    _logout()
+
+
+def test_term_detail_page_relation_target_is_a_dropdown_excluding_self():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert response.status_code == 200
+    assert '<select name="target">' in response.text
+    assert '<option value="Receivable Cash">Receivable Cash</option>' in response.text
+    assert '<option value="Cash">' not in response.text
+    _logout()
+
+
+def test_detail_page_404s_other_users_draft():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+    _logout()
+
+    _login_as(Role.EDITOR, email="bob@corp.com")
+    response = client.get("/app/terms/AliceDraft")
+    assert response.status_code == 404
+    _logout()
+
+
+def test_detail_page_shows_own_draft():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+
+    response = client.get("/app/terms/AliceDraft")
+    assert response.status_code == 200
+    _logout()
+
+
+def test_detail_page_shows_admin_other_users_draft():
+    apply_constraints()
+    _login_as(Role.EDITOR, email="alice@corp.com")
+    client.post("/app/terms/new", data={"name": "AliceDraft", "definition": "d", "formula": ""})
+    _logout()
+
+    _login_as(Role.ADMIN, email="admin@corp.com")
+    response = client.get("/app/terms/AliceDraft")
+    assert response.status_code == 200
     _logout()
