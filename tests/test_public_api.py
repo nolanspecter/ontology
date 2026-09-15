@@ -63,6 +63,61 @@ def test_public_api_hides_created_by():
     assert "created_by" not in response.json()
 
 
+def test_search_term_finds_published_terms_by_name_or_definition():
+    apply_constraints()
+    main_client.post("/terms", json={"name": "Advancable Cash", "definition": "Cash owed to an employee"})
+    main_client.post("/terms", json={"name": "Petty Cash", "definition": "Small on-hand fund"})
+    main_client.post("/terms", json={"name": "Unrelated", "definition": "Nothing to do with money"})
+    from app.db import run_query
+    run_query("MATCH (t:Term) WHERE t.name IN ['Advancable Cash', 'Petty Cash', 'Unrelated'] SET t.status = 'published'")
+
+    response = public_client.get("/search", params={"q": "cash"})
+    assert response.status_code == 200
+    names = {r["name"] for r in response.json()}
+    assert names == {"Advancable Cash", "Petty Cash"}
+    for r in response.json():
+        assert "score" in r
+
+
+def test_search_term_excludes_unpublished():
+    apply_constraints()
+    main_client.post("/terms", json={"name": "Draft Cash Term", "definition": "still a draft"})
+
+    response = public_client.get("/search", params={"q": "cash"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_term_respects_limit():
+    apply_constraints()
+    from app.db import run_query
+    for i in range(15):
+        main_client.post("/terms", json={"name": f"Cash Term {i}", "definition": "cash related"})
+    run_query("MATCH (t:Term) WHERE t.name STARTS WITH 'Cash Term' SET t.status = 'published'")
+
+    response = public_client.get("/search", params={"q": "cash"})
+    assert response.status_code == 200
+    assert len(response.json()) == 10
+
+
+def test_search_term_handles_lucene_special_characters_without_error():
+    apply_constraints()
+    response = public_client.get("/search", params={"q": "cash: (flow) && *risky*"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_term_finds_term_immediately_after_creation():
+    apply_constraints()
+    main_client.post("/terms", json={"name": "Just Created", "definition": "brand new term"})
+    from app.db import run_query
+    run_query("MATCH (t:Term {name: 'Just Created'}) SET t.status = 'published'")
+
+    response = public_client.get("/search", params={"q": "Just Created"})
+    assert response.status_code == 200
+    assert any(r["name"] == "Just Created" for r in response.json())
+
+
 def test_public_api_related_filters_on_both_sides_publication():
     apply_constraints()
     main_client.post("/terms", json={"name": "A", "definition": "a"})

@@ -1,10 +1,19 @@
+import re
 from app.db import run_query
-from app.models.term import TermCreate, TermOut, RESERVED_PROPERTY_FIELDS
+from app.models.term import TermCreate, TermOut, TermSearchResult, RESERVED_PROPERTY_FIELDS
 from app.models.term_kind import TERM_KINDS
 from app.models.relation import RelatedTermOut, validate_relation_type
 
 BUILTIN_RELATION_TYPES = {"COMPUTED_FROM", "PART_OF", "OPPOSITE_OF", "SYNONYM_OF", "RELATED_TO"}
 _BASE_FIELDS = RESERVED_PROPERTY_FIELDS
+
+# Lucene syntax characters that need escaping so free-text search input can't
+# be misread as a query operator (and doesn't 500 on things like "R&D" or "a:b").
+_LUCENE_SPECIAL_CHARS = re.compile(r'([+\-&|!(){}\[\]^"~*?:\\/])')
+
+
+def _escape_fulltext_query(text: str) -> str:
+    return _LUCENE_SPECIAL_CHARS.sub(r"\\\1", text)
 
 
 def _term_out_from_row(row: dict) -> TermOut:
@@ -143,3 +152,14 @@ def list_related_published(name: str) -> list[RelatedTermOut]:
         name=name,
     )
     return [RelatedTermOut(**row) for row in rows]
+
+
+def search_published_terms(text: str, limit: int = 10) -> list[TermSearchResult]:
+    rows = run_query(
+        "CALL db.index.fulltext.queryNodes('term_search_index', $text) YIELD node, score "
+        "WHERE node.status = 'published' "
+        "RETURN node.name AS name, score ORDER BY score DESC LIMIT $limit",
+        text=_escape_fulltext_query(text),
+        limit=limit,
+    )
+    return [TermSearchResult(**row) for row in rows]

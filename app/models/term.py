@@ -66,3 +66,8 @@ class PublicTermOut(BaseModel):
     version: int
     kind: str | None = None
     properties: dict[str, str] = Field(default_factory=dict)
+
+
+class TermSearchResult(BaseModel):
+    name: str
+    score: float
