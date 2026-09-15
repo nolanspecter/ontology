@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     oidc_server_metadata_url: str = ""
     session_secret_key: str = "dev-secret-change-in-production"
     dev_login_password: str = "dev"
+    # mcp_host: the MCP HTTP surface (app/mcp_server.py) has no auth — do not
+    # widen this beyond loopback without adding auth first.
     mcp_host: str = "127.0.0.1"
     mcp_port: int = 8001
 

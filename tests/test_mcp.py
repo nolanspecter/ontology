@@ -14,7 +14,12 @@ def test_mcp_server_main_runs_http_transport_from_settings(monkeypatch):
 
     mcp_server.main()
 
-    assert calls == [{"transport": "http", "host": settings.mcp_host, "port": settings.mcp_port}]
+    assert calls == [{
+        "transport": "http",
+        "host": settings.mcp_host,
+        "port": settings.mcp_port,
+        "host_origin_protection": "auto",
+    }]
 
 
 @pytest.mark.asyncio
