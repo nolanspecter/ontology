@@ -56,18 +56,22 @@ class TermOut(BaseModel):
 
 
 class PublicTermOut(BaseModel):
-    """TermOut without created_by — used on the public/MCP surface so a web
-    author's email never appears in the response body or the OpenAPI schema
-    that FastMCP.from_fastapi() reads to build tool output schemas."""
-    name: str
-    definition: str
-    formula: str | None
-    status: Literal["draft", "pending_review", "published"]
-    version: int
-    kind: str | None = None
-    properties: dict[str, str] = Field(default_factory=dict)
+    """A published knowledge-base term: its definition, optional formula,
+    kind, and free-form properties. This is the read-only agent/public view
+    (see get_term) — it never includes who created the term."""
+    name: str = Field(description="The term's exact name — pass this to get_term or list_related_terms.")
+    definition: str = Field(description="Plain-language definition of the term.")
+    formula: str | None = Field(description="Calculation formula, if this term has one (e.g. a computed financial metric). Null if not applicable.")
+    status: Literal["draft", "pending_review", "published"] = Field(
+        description="Always 'published' here — draft and pending-review terms are never returned on this surface."
+    )
+    version: int = Field(description="Optimistic-locking version number; increments on every approved edit.")
+    kind: str | None = Field(default=None, description="Structured kind label (e.g. 'Person', 'Business') if this term represents a typed entity, else null.")
+    properties: dict[str, str] = Field(default_factory=dict, description="Kind-specific and free-form key/value properties. Empty if the term has no kind.")
 
 
 class TermSearchResult(BaseModel):
-    name: str
-    score: float
+    """One fulltext-search match: a candidate term name and its relevance
+    score, not the term's content — follow up with get_term for that."""
+    name: str = Field(description="The matched term's exact name — pass this to get_term for its full definition.")
+    score: float = Field(description="Relevance score from the fulltext search; higher is a better match. Not normalized or comparable across different searches.")

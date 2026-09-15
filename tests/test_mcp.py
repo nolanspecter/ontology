@@ -30,6 +30,47 @@ async def test_mcp_get_term_returns_published_only():
 
 
 @pytest.mark.asyncio
+async def test_mcp_tools_have_descriptions_that_distinguish_them():
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+
+        # Every tool has a real description, not FastAPI's bare auto-title.
+        for name, tool in tools.items():
+            assert tool.description, f"{name} has no description"
+            assert tool.description not in {"Get Term", "List Related", "Search Term"}
+
+        # get_term and search_term each point the agent at the other for the
+        # case they don't handle, so an agent picking blind can self-correct.
+        assert "exact name" in tools["get_term"].description
+        assert "search_term" in tools["get_term"].description
+        assert "exact name" in tools["search_term"].description
+        assert "get_term" in tools["search_term"].description
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_input_fields_have_descriptions():
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+
+        assert tools["get_term"].input_schema["properties"]["name"]["description"]
+        assert tools["search_term"].input_schema["properties"]["q"]["description"]
+        assert tools["list_related_terms"].input_schema["properties"]["name"]["description"]
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_output_fields_have_descriptions():
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+
+        get_term_props = tools["get_term"].output_schema["properties"]
+        for field in ("name", "definition", "status", "kind", "properties"):
+            assert get_term_props[field]["description"], f"get_term output field {field} has no description"
+
+        search_item_props = tools["search_term"].output_schema["properties"]["result"]["items"]["properties"]
+        assert search_item_props["score"]["description"]
+
+
+@pytest.mark.asyncio
 async def test_mcp_search_term_returns_published_only():
     apply_constraints()
     from fastapi.testclient import TestClient

@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 RELATION_TYPE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,49}$")
 
@@ -24,5 +24,8 @@ class RelationCreate(BaseModel):
 
 
 class RelatedTermOut(BaseModel):
-    name: str
-    relation_type: str
+    """One outgoing typed relation from a term to another published term."""
+    name: str = Field(description="The related term's exact name — pass this to get_term for its definition.")
+    relation_type: str = Field(
+        description="The relation's type, e.g. COMPUTED_FROM, PART_OF, OPPOSITE_OF, SYNONYM_OF, RELATED_TO, or a custom uppercase type."
+    )
