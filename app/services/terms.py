@@ -124,3 +124,22 @@ def list_terms(q: str | None = None, category: str | None = None, status: str | 
 def list_categories() -> list[str]:
     rows = run_query("MATCH (c:Category) RETURN c.name AS name ORDER BY c.name")
     return [row["name"] for row in rows]
+
+
+def get_published_term(name: str) -> TermOut | None:
+    rows = run_query(
+        "MATCH (t:Term {name: $name, status: 'published'}) RETURN t.name AS name, "
+        "t.definition AS definition, t.formula AS formula, t.status AS status, "
+        "t.version AS version, t.createdBy AS created_by, labels(t) AS labels, properties(t) AS props",
+        name=name,
+    )
+    return _term_out_from_row(rows[0]) if rows else None
+
+
+def list_related_published(name: str) -> list[RelatedTermOut]:
+    rows = run_query(
+        "MATCH (:Term {name: $name, status: 'published'})-[r]->(t:Term {status: 'published'}) "
+        "RETURN t.name AS name, type(r) AS relation_type",
+        name=name,
+    )
+    return [RelatedTermOut(**row) for row in rows]
