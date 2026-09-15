@@ -49,13 +49,19 @@
   updateKindProperties();
   </script>
 
-  <label>Extra properties (optional, any name/value — must not reuse a Kind property name above)</label>
-  <label>Property 1 name <input type="text" name="extra_name_1"></label>
-  <label>Property 1 value <input type="text" name="extra_value_1"></label>
-  <label>Property 2 name <input type="text" name="extra_name_2"></label>
-  <label>Property 2 value <input type="text" name="extra_value_2"></label>
-  <label>Property 3 name <input type="text" name="extra_name_3"></label>
-  <label>Property 3 value <input type="text" name="extra_value_3"></label>
+  <p>Extra properties (optional, any name/value — must not reuse a Kind property name above)</p>
+  <div class="field-row">
+    <label>Property 1 name <input type="text" name="extra_name_1"></label>
+    <label>Property 1 value <input type="text" name="extra_value_1"></label>
+  </div>
+  <div class="field-row">
+    <label>Property 2 name <input type="text" name="extra_name_2"></label>
+    <label>Property 2 value <input type="text" name="extra_value_2"></label>
+  </div>
+  <div class="field-row">
+    <label>Property 3 name <input type="text" name="extra_name_3"></label>
+    <label>Property 3 value <input type="text" name="extra_value_3"></label>
+  </div>
   {% endif %}
 
   {% if not term %}
