@@ -129,3 +129,36 @@ def test_detail_page_shows_admin_other_users_draft():
     response = client.get("/app/terms/AliceDraft")
     assert response.status_code == 200
     _logout()
+
+
+def test_term_detail_shows_kind_badge_and_properties():
+    apply_constraints()
+    client.post(
+        "/terms",
+        json={
+            "name": "Alice Smith", "definition": "A person", "formula": None,
+            "kind": "Person", "properties": {"title": "CFO", "favorite_color": "teal"},
+        },
+    )
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Alice Smith")
+    assert response.status_code == 200
+    assert '<span class="badge">Person</span>' in response.text
+    assert "title" in response.text
+    assert "CFO" in response.text
+    assert "favorite_color" in response.text
+    assert "teal" in response.text
+    _logout()
+
+
+def test_term_detail_no_kind_badge_for_kindless_term():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert response.status_code == 200
+    assert '<span class="badge">Person</span>' not in response.text
+    assert '<span class="badge">Business</span>' not in response.text
+    _logout()

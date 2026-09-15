@@ -3,6 +3,14 @@
 <h1>{{ term.name }} <span class="badge badge-{{ term.status }}">{{ term.status }}</span> <span class="badge">v{{ term.version }}</span></h1>
 <p>{{ term.definition }}</p>
 {% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
+{% if term.kind %}<p><span class="badge">{{ term.kind }}</span></p>{% endif %}
+{% if term.properties %}
+<ul>
+{% for key, value in term.properties.items() %}
+<li><strong>{{ key }}:</strong> {{ value }}</li>
+{% endfor %}
+</ul>
+{% endif %}
 
 {% if pending_edit %}
 <p class="notice">An edit is pending review: "{{ pending_edit.definition }}"{% if pending_edit.formula %}, formula <code>{{ pending_edit.formula }}</code>{% endif %}.</p>
