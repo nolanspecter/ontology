@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ term.name }} <span class="badge">{{ term.status }}</span> <span class="badge">v{{ term.version }}</span></h1>
+<p>{{ term.definition }}</p>
+{% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
+
+<h2>Related</h2>
+<ul>
+{% for r in related %}<li>{{ r.relation_type.value }} &rarr; {{ r.name }}</li>{% else %}<li>None yet.</li>{% endfor %}
+</ul>
+
+{% if current_user.role in ("editor", "admin") %}
+<p><a href="/app/terms/{{ term.name }}/edit">Edit</a></p>
+
+<h2>Add relation</h2>
+<form method="post" action="/app/terms/{{ term.name }}/relations">
+  <input type="text" name="target" placeholder="Target term name" required>
+  <select name="relation_type">
+    <option value="COMPUTED_FROM">COMPUTED_FROM</option>
+    <option value="PART_OF">PART_OF</option>
+    <option value="OPPOSITE_OF">OPPOSITE_OF</option>
+    <option value="SYNONYM_OF">SYNONYM_OF</option>
+    <option value="RELATED_TO">RELATED_TO</option>
+  </select>
+  <button type="submit">Add relation</button>
+</form>
+{% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}
+{% endif %}
+{% endblock %}

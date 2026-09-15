@@ -25,3 +25,16 @@ def search_terms(
     }
     template = "pages/_term_results.html" if is_htmx(request) else "pages/term_search.html"
     return templates.TemplateResponse(request, template, context)
+
+
+@router.get("/{name}")
+def term_detail(name: str, request: Request, user: UserOut = Depends(require_web_role())):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    related = term_service.list_related(name)
+    return templates.TemplateResponse(
+        request, "pages/term_detail.html", {"current_user": user, "term": term, "related": related}
+    )
