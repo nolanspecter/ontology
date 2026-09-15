@@ -48,6 +48,25 @@ async def test_mcp_tools_have_descriptions_that_distinguish_them():
 
 
 @pytest.mark.asyncio
+async def test_mcp_tool_descriptions_spell_out_input_and_output_shape():
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+
+        get_term_desc = tools["get_term"].description
+        assert "Input: name" in get_term_desc
+        for field in ("definition", "formula", "status", "version", "kind", "properties"):
+            assert field in get_term_desc, f"get_term description doesn't mention output field {field}"
+
+        related_desc = tools["list_related_terms"].description
+        assert "Input: name" in related_desc
+        assert "relation_type" in related_desc
+
+        search_desc = tools["search_term"].description
+        assert "Input: q" in search_desc
+        assert "score" in search_desc
+
+
+@pytest.mark.asyncio
 async def test_mcp_tool_input_fields_have_descriptions():
     async with Client(mcp) as client:
         tools = {t.name: t for t in await client.list_tools()}

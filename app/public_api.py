@@ -16,6 +16,11 @@ def get_term(name: str = Path(description=_NAME_DESCRIPTION)):
     it, or search_term already returned it. Returns 404 if no published
     term has that exact name; try search_term instead if you're not sure
     of the spelling.
+
+    Input: name (string, required) — the exact term name.
+    Output: name (string), definition (string), formula (string or null),
+    status (string, always "published" here), version (integer),
+    kind (string or null), properties (object of string to string).
     """
     term = term_service.get_published_term(name)
     if term is None:
@@ -30,6 +35,9 @@ def list_related(name: str = Path(description=_NAME_DESCRIPTION)):
 
     Only returns what the term connects to, not its own definition — call
     get_term for that.
+
+    Input: name (string, required) — the exact term name.
+    Output: a list of relations, each {name (string), relation_type (string)}.
     """
     return term_service.list_related_published(name)
 
@@ -47,5 +55,9 @@ def search_term(
 
     Ranked by relevance, returns up to 10 {name, score} matches — not full
     term detail. Call get_term with the name you want next.
+
+    Input: q (string, required, 1-200 characters) — free-text search phrase.
+    Output: a list of up to 10 matches, each {name (string), score (number,
+    higher is a better match)}, ordered by score descending.
     """
     return term_service.search_published_terms(q)
