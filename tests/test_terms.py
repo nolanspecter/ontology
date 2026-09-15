@@ -85,3 +85,62 @@ def test_create_term_without_created_by_defaults_to_none():
 
     created = term_service.create_term(TermCreate(name="Cash", definition="Money"))
     assert created.created_by is None
+
+
+def test_term_create_with_valid_kind_and_required_property():
+    from app.models.term import TermCreate
+
+    term = TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"})
+    assert term.kind == "Person"
+    assert term.properties == {"title": "CFO"}
+
+
+def test_term_create_rejects_unknown_kind():
+    from pydantic import ValidationError
+    from app.models.term import TermCreate
+
+    try:
+        TermCreate(name="X", definition="d", kind="Alien", properties={})
+        assert False, "expected ValidationError"
+    except ValidationError as e:
+        assert "unknown kind" in str(e)
+
+
+def test_term_create_rejects_missing_required_property():
+    from pydantic import ValidationError
+    from app.models.term import TermCreate
+
+    try:
+        TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={})
+        assert False, "expected ValidationError"
+    except ValidationError as e:
+        assert "missing required property: title" in str(e)
+
+
+def test_term_create_rejects_properties_without_kind():
+    from pydantic import ValidationError
+    from app.models.term import TermCreate
+
+    try:
+        TermCreate(name="X", definition="d", properties={"foo": "bar"})
+        assert False, "expected ValidationError"
+    except ValidationError as e:
+        assert "properties require a kind" in str(e)
+
+
+def test_term_create_allows_free_extra_properties_beyond_kind_schema():
+    from app.models.term import TermCreate
+
+    term = TermCreate(
+        name="Alice Smith", definition="A person", kind="Person",
+        properties={"title": "CFO", "favorite_color": "teal"},
+    )
+    assert term.properties["favorite_color"] == "teal"
+
+
+def test_term_create_defaults_kind_and_properties_to_none_and_empty():
+    from app.models.term import TermCreate
+
+    term = TermCreate(name="Cash", definition="Money")
+    assert term.kind is None
+    assert term.properties == {}
