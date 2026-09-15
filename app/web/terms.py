@@ -96,16 +96,65 @@ def submit_edit_page(
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
     term = term_service.get_term(name)
-    try:
-        review_service.submit_edit(
-            name, EditSubmit(definition=definition, formula=formula or None, expected_version=expected_version)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
         )
-    except (review_service.VersionConflict, ValueError):
+    try:
+        data = EditSubmit(definition=definition, formula=formula or None, expected_version=expected_version)
+    except ValidationError as e:
+        errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
         return templates.TemplateResponse(
             request,
             "pages/term_form.html",
-            {"current_user": user, "term": term, "conflict": True, "values": {"definition": definition, "formula": formula}},
+            {
+                "current_user": user,
+                "term": term,
+                "errors": errors,
+                "values": {"definition": definition, "formula": formula},
+            },
         )
+    try:
+        review_service.submit_edit(name, data)
+    except review_service.VersionConflict:
+        return templates.TemplateResponse(
+            request,
+            "pages/term_form.html",
+            {
+                "current_user": user,
+                "term": term,
+                "conflict": True,
+                "values": {"definition": definition, "formula": formula},
+                "stale_version": expected_version,
+            },
+        )
+    except ValueError:
+        return templates.TemplateResponse(
+            request,
+            "pages/term_form.html",
+            {
+                "current_user": user,
+                "term": term,
+                "pending_edit_exists": True,
+                "values": {"definition": definition, "formula": formula},
+            },
+        )
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/submit")
+def submit_term_page(
+    name: str, request: Request, user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN))
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    try:
+        review_service.submit_new_term(name)
+    except LookupError:
+        pass  # not in draft status (already submitted/published) — fall through to detail page
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
 
 

@@ -3,8 +3,10 @@
 <h1>Terms</h1>
 <form>
   <input type="text" id="q" name="q" value="{{ q }}" placeholder="Search terms"
-         hx-get="/app/terms" hx-trigger="keyup changed delay:300ms" hx-target="#results" hx-swap="innerHTML">
-  <select name="category" hx-get="/app/terms" hx-trigger="change" hx-target="#results" hx-swap="innerHTML">
+         hx-get="/app/terms" hx-trigger="keyup changed delay:300ms" hx-target="#results" hx-swap="innerHTML"
+         hx-include="closest form">
+  <select name="category" hx-get="/app/terms" hx-trigger="change" hx-target="#results" hx-swap="innerHTML"
+          hx-include="closest form">
     <option value="">All categories</option>
     {% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
   </select>

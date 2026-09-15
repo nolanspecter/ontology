@@ -56,3 +56,40 @@ def test_new_term_form_requires_editor_role():
     response = client.get("/app/terms/new")
     assert response.status_code == 403
     _logout()
+
+
+def test_new_term_form_rejects_slash_in_name():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/new", data={"name": "Debt/Equity", "definition": "ratio", "formula": ""}
+    )
+    assert response.status_code == 200
+    assert "<form" in response.text
+    assert client.get("/terms/Debt/Equity").status_code == 404
+    _logout()
+
+
+def test_submit_for_review_moves_draft_to_pending_review():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Yield", "definition": "return on investment", "formula": ""})
+
+    response = client.post("/app/terms/Yield/submit", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/app/terms/Yield"
+    _logout()
+
+    assert term_service.get_term("Yield").status == "pending_review"
+
+
+def test_submit_for_review_404s_for_unknown_term():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post("/app/terms/DoesNotExist/submit")
+    assert response.status_code == 404
+    _logout()

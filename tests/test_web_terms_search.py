@@ -3,6 +3,7 @@ from app.main import app
 from app.schema import apply_constraints
 from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
+from app.services import terms as term_service
 
 client = TestClient(app)
 
@@ -43,4 +44,25 @@ def test_search_htmx_request_returns_fragment_only():
     assert response.status_code == 200
     assert "Cash" in response.text
     assert "<nav>" not in response.text
+    _logout()
+
+
+def test_search_htmx_request_honors_combined_query_and_category():
+    # hx-include="closest form" sends both q and category together on either
+    # trigger; the server side of that composition is what's under test here
+    # (verifying the browser actually wires hx-include needs a real browser).
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    client.post("/terms", json={"name": "Cash Flow", "definition": "movement of cash", "formula": None})
+    term_service.attach_category("Cash Flow", "Liquidity")
+    _login_as(Role.EDITOR)
+
+    response = client.get(
+        "/app/terms",
+        params={"q": "cash", "category": "Liquidity"},
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    assert "Cash Flow" in response.text
+    assert "Cash</" not in response.text  # plain "Cash" filtered out by category
     _logout()

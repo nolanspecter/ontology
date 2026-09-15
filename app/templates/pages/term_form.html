@@ -2,12 +2,13 @@
 {% block content %}
 <h1>{{ "Edit" if term else "New" }} Term{% if term %}: {{ term.name }}{% endif %}</h1>
 {% if conflict %}<p class="error">This term changed since you loaded this page — reload to see the latest version.</p>{% endif %}
+{% if pending_edit_exists %}<p class="error">An edit to this term is already awaiting review.</p>{% endif %}
 <form method="post" action="{{ '/app/terms/' + term.name + '/edit' if term else '/app/terms/new' }}">
   {% if not term %}
   <label>Name <input type="text" name="name" value="{{ values.name if values else '' }}"></label>
   {% if errors and errors.name %}<p class="error">{{ errors.name }}</p>{% endif %}
   {% else %}
-  <input type="hidden" name="expected_version" value="{{ term.version }}">
+  <input type="hidden" name="expected_version" value="{{ stale_version if stale_version is defined else term.version }}">
   {% endif %}
 
   <label>Definition <textarea name="definition">{{ values.definition if values else (term.definition if term else '') }}</textarea></label>

@@ -3,6 +3,8 @@ from app.main import app
 from app.schema import apply_constraints
 from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
+from app.models.review import EditSubmit
+from app.services import terms as term_service
 
 client = TestClient(app)
 
@@ -103,3 +105,81 @@ def test_edit_form_stale_version_shows_conflict_banner():
     assert response.status_code == 200
     assert "changed since" in response.text.lower()
     _logout()
+
+
+def test_edit_submit_404s_for_unknown_term():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/DoesNotExist/edit",
+        data={"definition": "new def", "formula": "", "expected_version": "1"},
+    )
+    assert response.status_code == 404
+    _logout()
+
+
+def test_edit_form_blank_definition_rejected_without_queuing():
+    from app.services.review import get_review_queue
+
+    apply_constraints()
+    _publish("Liability")
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Liability/edit", data={"definition": "", "formula": "", "expected_version": "1"}
+    )
+    assert response.status_code == 200
+    assert "<form" in response.text
+    _logout()
+
+    items = get_review_queue()
+    assert not any(item.term_name == "Liability" for item in items)
+
+
+def test_edit_form_second_pending_edit_shows_distinct_message():
+    apply_constraints()
+    _publish("Asset")
+    _login_as(Role.EDITOR)
+
+    first = client.post(
+        "/app/terms/Asset/edit",
+        data={"definition": "first edit", "formula": "", "expected_version": "1"},
+        follow_redirects=False,
+    )
+    assert first.status_code == 303
+
+    second = client.post(
+        "/app/terms/Asset/edit", data={"definition": "second edit", "formula": "", "expected_version": "1"}
+    )
+    assert second.status_code == 200
+    assert "already awaiting review" in second.text.lower()
+    assert "changed since" not in second.text.lower()
+    _logout()
+
+
+def test_edit_form_blind_resubmit_after_conflict_conflicts_again():
+    apply_constraints()
+    _publish("Equity")
+    _login_as(Role.EDITOR)
+
+    # simulate another user's approved change bumping the version to 2
+    from app.services import review as review_service
+    review_service.submit_edit(
+        "Equity", EditSubmit(definition="someone else's edit", formula=None, expected_version=1)
+    )
+    review_service.approve("Equity", changed_by="other@corp.com")
+
+    stale_data = {"definition": "my stale edit", "formula": "", "expected_version": "1"}
+    first = client.post("/app/terms/Equity/edit", data=stale_data)
+    assert first.status_code == 200
+    assert "changed since" in first.text.lower()
+
+    # blind resubmit with the exact same (stale) form data must conflict again,
+    # not silently succeed and overwrite the other user's change
+    second = client.post("/app/terms/Equity/edit", data=stale_data)
+    assert second.status_code == 200
+    assert "changed since" in second.text.lower()
+    _logout()
+
+    assert term_service.get_term("Equity").definition == "someone else's edit"

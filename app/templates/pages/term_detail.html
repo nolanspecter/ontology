@@ -12,6 +12,12 @@
 {% if current_user.role in ("editor", "admin") %}
 <p><a href="/app/terms/{{ term.name }}/edit">Edit</a></p>
 
+{% if term.status == "draft" %}
+<form method="post" action="/app/terms/{{ term.name }}/submit">
+  <button type="submit">Submit for Review</button>
+</form>
+{% endif %}
+
 <h2>Add relation</h2>
 <form method="post" action="/app/terms/{{ term.name }}/relations">
   <input type="text" name="target" placeholder="Target term name" required>
