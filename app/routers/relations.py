@@ -20,3 +20,13 @@ def create_relation(
 @router.get("/{name}/related", response_model=list[RelatedTermOut])
 def list_related(name: str):
     return term_service.list_related(name)
+
+
+@router.delete("/{name}/relations")
+def delete_relation(
+    name: str, data: RelationCreate, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))
+):
+    if term_service.get_term(name) is None or term_service.get_term(data.target) is None:
+        raise HTTPException(status_code=404, detail="Term not found")
+    term_service.remove_relation(name, data.target, data.relation_type)
+    return {"deleted": True}

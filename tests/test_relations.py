@@ -43,3 +43,34 @@ def test_relation_rejects_invalid_type_format():
     _make_term("B")
     response = client.post("/terms/A/relations", json={"target": "B", "relation_type": "made-up; DROP"})
     assert response.status_code == 422
+
+
+def test_delete_relation_removes_it():
+    apply_constraints()
+    _make_term("Advancable Cash")
+    _make_term("Receivable Cash")
+    client.post(
+        "/terms/Advancable Cash/relations",
+        json={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"},
+    )
+
+    response = client.request(
+        "DELETE",
+        "/terms/Advancable Cash/relations",
+        json={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"},
+    )
+    assert response.status_code == 200
+
+    related = client.get("/terms/Advancable Cash/related").json()
+    assert related == []
+
+
+def test_delete_relation_is_a_no_op_if_it_never_existed():
+    apply_constraints()
+    _make_term("A")
+    _make_term("B")
+
+    response = client.request(
+        "DELETE", "/terms/A/relations", json={"target": "B", "relation_type": "RELATED_TO"}
+    )
+    assert response.status_code == 200
