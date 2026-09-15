@@ -5,6 +5,7 @@ from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
 from app.services import review as review_service
 from app.services import terms as term_service
+from app.db import run_query
 
 client = TestClient(app)
 
@@ -92,11 +93,33 @@ def test_delete_cascades_relations_and_history():
     )
     _login_as(Role.ADMIN)
 
+    cash_change_count = len(review_service.list_changes("Cash"))
+    total_before = run_query("MATCH (c:Change) RETURN count(c) AS n")[0]["n"]
+    assert cash_change_count > 0  # sanity: _publish's approve_new left an audit record
+
     client.post("/app/terms/Cash/delete", data={"confirm_name": "Cash"})
 
     assert client.get("/terms/Cash").status_code == 404
     assert review_service.list_changes("Cash") == []
     assert term_service.list_related("Receivable Cash") == []
+    # not just unreachable via a MATCH through the (now-gone) term — actually gone from the graph.
+    # Receivable Cash's own (unrelated) Change history must survive untouched.
+    total_after = run_query("MATCH (c:Change) RETURN count(c) AS n")[0]["n"]
+    assert total_after == total_before - cash_change_count
+    _logout()
+
+
+def test_delete_removes_orphaned_pending_draft_node():
+    apply_constraints()
+    _publish("Cash")
+    client.post(
+        "/terms/Cash/edits", json={"definition": "new def", "formula": None, "expected_version": 1}
+    )
+    _login_as(Role.ADMIN)
+
+    client.post("/app/terms/Cash/delete", data={"confirm_name": "Cash"})
+
+    assert run_query("MATCH (d:Draft) RETURN count(d) AS n")[0]["n"] == 0
     _logout()
 
 

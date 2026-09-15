@@ -19,12 +19,14 @@ def create_term(data: TermCreate, created_by: str | None = None) -> TermOut:
 
 
 def delete_term(name: str) -> None:
-    rows = run_query(
-        "MATCH (t:Term {name: $name}) DETACH DELETE t RETURN count(t) AS deleted",
-        name=name,
-    )
-    if rows[0]["deleted"] == 0:
+    rows = run_query("MATCH (t:Term {name: $name}) RETURN t.name AS name", name=name)
+    if not rows:
         raise LookupError(f"No term named '{name}'")
+    # DETACH DELETE on the term alone only strips ITS relationships — the Change/Draft
+    # nodes on the other end would survive, orphaned. Delete them explicitly first.
+    run_query("MATCH (:Term {name: $name})-[:HAS_CHANGE]->(c:Change) DETACH DELETE c", name=name)
+    run_query("MATCH (d:Draft)-[:DRAFT_OF]->(:Term {name: $name}) DETACH DELETE d", name=name)
+    run_query("MATCH (t:Term {name: $name}) DETACH DELETE t", name=name)
 
 
 def get_term(name: str) -> TermOut | None:
