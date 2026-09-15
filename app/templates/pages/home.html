@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Corporate KB</h1>
-<p>Welcome. Use the nav above to sign in and get to work.</p>
+{% if current_user %}
+<p>Signed in as {{ current_user.email }}.</p>
+<div class="actions"><a class="btn" href="/app/terms">Browse terms</a></div>
+{% else %}
+<p>Sign in above to search terms, propose edits, and review changes.</p>
+{% endif %}
 {% endblock %}

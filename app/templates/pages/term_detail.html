@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>{{ term.name }} <span class="badge">{{ term.status }}</span> <span class="badge">v{{ term.version }}</span></h1>
+<h1>{{ term.name }} <span class="badge badge-{{ term.status }}">{{ term.status }}</span> <span class="badge">v{{ term.version }}</span></h1>
 <p>{{ term.definition }}</p>
 {% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
 
@@ -10,13 +10,14 @@
 </ul>
 
 {% if current_user.role in ("editor", "admin") %}
-<p><a href="/app/terms/{{ term.name }}/edit">Edit</a></p>
-
-{% if term.status == "draft" %}
-<form method="post" action="/app/terms/{{ term.name }}/submit">
-  <button type="submit">Submit for Review</button>
-</form>
-{% endif %}
+<div class="actions">
+  <a href="/app/terms/{{ term.name }}/edit">Edit</a>
+  {% if term.status == "draft" %}
+  <form method="post" action="/app/terms/{{ term.name }}/submit">
+    <button type="submit">Submit for Review</button>
+  </form>
+  {% endif %}
+</div>
 
 <h2>Add relation</h2>
 <form method="post" action="/app/terms/{{ term.name }}/relations">
