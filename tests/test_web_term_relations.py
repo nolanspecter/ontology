@@ -31,7 +31,7 @@ def test_add_relation_form_creates_relation_and_redirects():
     assert response.headers["location"] == "/app/terms/Cash"
 
     related = list_related("Cash")
-    assert any(r.name == "Receivable Cash" and r.relation_type.value == "COMPUTED_FROM" for r in related)
+    assert any(r.name == "Receivable Cash" and r.relation_type == "COMPUTED_FROM" for r in related)
     _logout()
 
 
@@ -126,6 +126,38 @@ def test_remove_relation_form_requires_editor_role():
     )
     assert response.status_code == 403
     assert len(list_related("Cash")) == 1
+    _logout()
+
+
+def test_add_relation_form_accepts_custom_relation_type():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/relations",
+        data={"target": "Receivable Cash", "relation_type": "MADE_UP_TYPE"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert any(r.name == "Receivable Cash" and r.relation_type == "MADE_UP_TYPE" for r in list_related("Cash"))
+    _logout()
+
+
+def test_add_relation_form_rejects_invalid_relation_type_format():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/relations",
+        data={"target": "Receivable Cash", "relation_type": "lowercase-type"},
+    )
+    assert response.status_code == 200
+    assert "uppercase" in response.text.lower()
+    assert list_related("Cash") == []
     _logout()
 
 

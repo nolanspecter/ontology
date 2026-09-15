@@ -8,7 +8,6 @@ from app.services import review as review_service
 from app.models.user import UserOut, Role
 from app.models.term import TermCreate, TermOut
 from app.models.review import EditSubmit
-from app.models.relation import RelationType
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -56,6 +55,7 @@ def new_term_form(request: Request, user: UserOut = Depends(require_web_role(Rol
             "current_user": user,
             "categories": term_service.list_categories(),
             "all_terms": term_service.list_terms(),
+            "relation_types": term_service.list_relation_types(),
         },
     )
 
@@ -84,13 +84,22 @@ def create_term_page(
                 "values": {"name": name, "definition": definition, "formula": formula, "category": category},
                 "categories": term_service.list_categories(),
                 "all_terms": term_service.list_terms(),
+                "relation_types": term_service.list_relation_types(),
             },
         )
     term = term_service.create_term(data, created_by=user.email)
     if category:
         term_service.attach_category(term.name, category)
     if target:
+        relation_error = None
         if term_service.get_term(target) is None:
+            relation_error = f"'{target}' not found"
+        else:
+            try:
+                term_service.create_relation(term.name, target, relation_type)
+            except ValueError as e:
+                relation_error = str(e)
+        if relation_error:
             related = term_service.list_related(term.name)
             return templates.TemplateResponse(
                 request,
@@ -99,11 +108,11 @@ def create_term_page(
                     "current_user": user,
                     "term": term,
                     "related": related,
-                    "relation_error": f"'{target}' not found",
+                    "relation_error": relation_error,
                     "other_terms": _other_term_names(term.name),
+                    "relation_types": term_service.list_relation_types(),
                 },
             )
-        term_service.create_relation(term.name, target, RelationType(relation_type))
     if user.role == Role.ADMIN:
         review_service.submit_new_term(term.name)
         review_service.approve(term.name, changed_by=user.email)
@@ -132,6 +141,7 @@ def term_detail(name: str, request: Request, user: UserOut = Depends(require_web
             "term": term,
             "related": related,
             "other_terms": _other_term_names(name),
+            "relation_types": term_service.list_relation_types(),
             "pending_edit": pending_edit,
             "changes": changes,
         },
@@ -225,7 +235,7 @@ def add_relation_page(
     name: str,
     request: Request,
     target: str = Form(""),
-    relation_type: RelationType = Form(...),
+    relation_type: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
     term = term_service.get_term(name)
@@ -233,7 +243,15 @@ def add_relation_page(
         return templates.TemplateResponse(
             request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
         )
+    relation_error = None
     if term_service.get_term(target) is None:
+        relation_error = f"'{target}' not found"
+    else:
+        try:
+            term_service.create_relation(name, target, relation_type)
+        except ValueError as e:
+            relation_error = str(e)
+    if relation_error:
         related = term_service.list_related(name)
         return templates.TemplateResponse(
             request,
@@ -242,11 +260,11 @@ def add_relation_page(
                 "current_user": user,
                 "term": term,
                 "related": related,
-                "relation_error": f"'{target}' not found",
+                "relation_error": relation_error,
                 "other_terms": _other_term_names(name),
+                "relation_types": term_service.list_relation_types(),
             },
         )
-    term_service.create_relation(name, target, relation_type)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
 
 
@@ -255,7 +273,7 @@ def remove_relation_page(
     name: str,
     request: Request,
     target: str = Form(""),
-    relation_type: RelationType = Form(...),
+    relation_type: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
     term = term_service.get_term(name)

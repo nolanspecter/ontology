@@ -11,11 +11,11 @@
 <h2>Related</h2>
 <ul>
 {% for r in related %}
-<li>{{ r.relation_type.value }} &rarr; <a href="/app/terms/{{ r.name }}">{{ r.name }}</a>
+<li>{{ r.relation_type }} &rarr; <a href="/app/terms/{{ r.name }}">{{ r.name }}</a>
   {% if current_user.role in ("editor", "admin") %}
   <form method="post" action="/app/terms/{{ term.name }}/relations/remove" style="display:inline">
     <input type="hidden" name="target" value="{{ r.name }}">
-    <input type="hidden" name="relation_type" value="{{ r.relation_type.value }}">
+    <input type="hidden" name="relation_type" value="{{ r.relation_type }}">
     <button type="submit" class="btn-ghost btn-icon" aria-label="Remove relation to {{ r.name }}">&times;</button>
   </form>
   {% endif %}
@@ -38,13 +38,10 @@
   <select name="target">
     {% for t in other_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
   </select>
-  <select name="relation_type">
-    <option value="COMPUTED_FROM">COMPUTED_FROM</option>
-    <option value="PART_OF">PART_OF</option>
-    <option value="OPPOSITE_OF">OPPOSITE_OF</option>
-    <option value="SYNONYM_OF">SYNONYM_OF</option>
-    <option value="RELATED_TO">RELATED_TO</option>
-  </select>
+  <input type="text" name="relation_type" list="relation-type-options" placeholder="e.g. COMPUTED_FROM" value="COMPUTED_FROM">
+  <datalist id="relation-type-options">
+    {% for rt in relation_types %}<option value="{{ rt }}">{% endfor %}
+  </datalist>
   <button type="submit">Add relation</button>
 </form>
 {% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}

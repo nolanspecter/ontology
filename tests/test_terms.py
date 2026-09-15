@@ -57,6 +57,17 @@ def test_list_categories_returns_attached_categories():
     assert response.json() == ["Liquidity"]
 
 
+def test_list_relation_types_includes_builtins_and_custom():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    term_service.create_relation("Cash", "Receivable Cash", "MADE_UP_TYPE")
+
+    types = term_service.list_relation_types()
+    assert "COMPUTED_FROM" in types
+    assert "MADE_UP_TYPE" in types
+
+
 def test_create_term_stores_created_by():
     apply_constraints()
     from app.models.term import TermCreate

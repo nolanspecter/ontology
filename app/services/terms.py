@@ -1,6 +1,8 @@
 from app.db import run_query
 from app.models.term import TermCreate, TermOut
-from app.models.relation import RelationType, RelatedTermOut
+from app.models.relation import RelatedTermOut, validate_relation_type
+
+BUILTIN_RELATION_TYPES = {"COMPUTED_FROM", "PART_OF", "OPPOSITE_OF", "SYNONYM_OF", "RELATED_TO"}
 
 
 def create_term(data: TermCreate, created_by: str | None = None) -> TermOut:
@@ -34,19 +36,27 @@ def attach_category(term_name: str, category_name: str) -> None:
     )
 
 
-def create_relation(source: str, target: str, relation_type: RelationType) -> None:
+def create_relation(source: str, target: str, relation_type: str) -> None:
+    relation_type = validate_relation_type(relation_type)
     run_query(
         f"MATCH (a:Term {{name: $source}}), (b:Term {{name: $target}}) "
-        f"MERGE (a)-[:{relation_type.value}]->(b)",
+        f"MERGE (a)-[:{relation_type}]->(b)",
         source=source, target=target,
     )
 
 
-def remove_relation(source: str, target: str, relation_type: RelationType) -> None:
+def remove_relation(source: str, target: str, relation_type: str) -> None:
+    relation_type = validate_relation_type(relation_type)
     run_query(
-        f"MATCH (a:Term {{name: $source}})-[r:{relation_type.value}]->(b:Term {{name: $target}}) DELETE r",
+        f"MATCH (a:Term {{name: $source}})-[r:{relation_type}]->(b:Term {{name: $target}}) DELETE r",
         source=source, target=target,
     )
+
+
+def list_relation_types() -> list[str]:
+    rows = run_query("MATCH (:Term)-[r]->(:Term) RETURN DISTINCT type(r) AS name")
+    existing = {row["name"] for row in rows}
+    return sorted(existing | BUILTIN_RELATION_TYPES)
 
 
 def list_related(name: str) -> list[RelatedTermOut]:

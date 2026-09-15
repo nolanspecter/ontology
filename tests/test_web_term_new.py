@@ -151,7 +151,7 @@ def test_new_term_form_declares_relation_when_target_given():
     _logout()
 
     related = term_service.list_related("Receivable Cash")
-    assert [(r.name, r.relation_type.value) for r in related] == [("Cash", "COMPUTED_FROM")]
+    assert [(r.name, r.relation_type) for r in related] == [("Cash", "COMPUTED_FROM")]
 
 
 def test_new_term_form_without_target_creates_term_with_no_relations():

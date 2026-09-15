@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.schema import apply_constraints
 from app.services import terms as term_service
-from app.models.relation import RelationType
 from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
 
@@ -21,7 +20,7 @@ def test_term_detail_page_shows_definition_and_related():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
     client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
-    term_service.create_relation("Cash", "Receivable Cash", RelationType.COMPUTED_FROM)
+    term_service.create_relation("Cash", "Receivable Cash", "COMPUTED_FROM")
     _login_as(Role.EDITOR)
 
     response = client.get("/app/terms/Cash")

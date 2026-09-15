@@ -26,9 +26,20 @@ def test_typed_relation_and_list_related():
     assert related == [{"name": "Receivable Cash", "relation_type": "COMPUTED_FROM"}]
 
 
-def test_relation_rejects_unknown_type():
+def test_relation_accepts_a_new_custom_type():
     apply_constraints()
     _make_term("A")
     _make_term("B")
     response = client.post("/terms/A/relations", json={"target": "B", "relation_type": "MADE_UP"})
+    assert response.status_code == 201
+
+    related = client.get("/terms/A/related").json()
+    assert related == [{"name": "B", "relation_type": "MADE_UP"}]
+
+
+def test_relation_rejects_invalid_type_format():
+    apply_constraints()
+    _make_term("A")
+    _make_term("B")
+    response = client.post("/terms/A/relations", json={"target": "B", "relation_type": "made-up; DROP"})
     assert response.status_code == 422

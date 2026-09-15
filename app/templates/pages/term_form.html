@@ -28,13 +28,10 @@
       {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
     </select>
   </label>
-  <select name="relation_type">
-    <option value="COMPUTED_FROM">COMPUTED_FROM</option>
-    <option value="PART_OF">PART_OF</option>
-    <option value="OPPOSITE_OF">OPPOSITE_OF</option>
-    <option value="SYNONYM_OF">SYNONYM_OF</option>
-    <option value="RELATED_TO">RELATED_TO</option>
-  </select>
+  <input type="text" name="relation_type" list="relation-type-options" placeholder="e.g. COMPUTED_FROM" value="COMPUTED_FROM">
+  <datalist id="relation-type-options">
+    {% for rt in relation_types %}<option value="{{ rt }}">{% endfor %}
+  </datalist>
   {% endif %}
 
   <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
