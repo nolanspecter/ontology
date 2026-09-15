@@ -34,7 +34,10 @@ def review_detail_page(name: str, request: Request, user: UserOut = Depends(requ
 
 @router.post("/{name}/approve")
 def approve_page(name: str, request: Request, user: UserOut = Depends(require_web_role(Role.REVIEWER, Role.ADMIN))):
-    review_service.approve(name, changed_by=user.email)
+    try:
+        review_service.approve(name, changed_by=user.email)
+    except LookupError:
+        pass
     if is_htmx(request):
         return HTMLResponse("")
     return RedirectResponse(url="/app/review", status_code=303)
@@ -44,10 +47,13 @@ def approve_page(name: str, request: Request, user: UserOut = Depends(require_we
 def reject_page(
     name: str,
     request: Request,
-    reason: str = Form(...),
+    reason: str = Form(..., min_length=1),
     user: UserOut = Depends(require_web_role(Role.REVIEWER, Role.ADMIN)),
 ):
-    review_service.reject(name, changed_by=user.email, reason=reason)
+    try:
+        review_service.reject(name, changed_by=user.email, reason=reason)
+    except LookupError:
+        pass
     if is_htmx(request):
         return HTMLResponse("")
     return RedirectResponse(url="/app/review", status_code=303)

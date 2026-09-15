@@ -69,3 +69,14 @@ def test_reject_via_full_page_post_redirects():
     assert response.status_code == 303
     assert response.headers["location"] == "/app/review"
     _logout()
+
+
+def test_reject_via_web_route_rejects_empty_reason():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms/Cash/submit")
+    _login_as(Role.REVIEWER)
+
+    response = client.post("/app/review/Cash/reject", data={"reason": ""})
+    assert response.status_code == 422
+    _logout()

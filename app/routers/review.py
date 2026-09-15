@@ -47,5 +47,8 @@ def approve(name: str, user: UserOut = Depends(require_role(Role.REVIEWER, Role.
 
 @router.post("/review/{name}/reject")
 def reject(name: str, data: RejectRequest, user: UserOut = Depends(require_role(Role.REVIEWER, Role.ADMIN))):
-    review_service.reject(name, changed_by=user.email, reason=data.reason)
+    try:
+        review_service.reject(name, changed_by=user.email, reason=data.reason)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return {"rejected": True}

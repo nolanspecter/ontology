@@ -39,6 +39,17 @@ def test_review_page_shows_empty_state_for_reviewer():
     _logout()
 
 
+def test_approve_page_forbidden_for_editor():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms/Cash/submit")
+    _login_as(Role.EDITOR)
+
+    response = client.post("/app/review/Cash/approve")
+    assert response.status_code == 403
+    _logout()
+
+
 def test_review_page_lists_pending_items():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})

@@ -91,11 +91,6 @@ def reject(name: str, changed_by: str, reason: str) -> None:
     if draft_rows:
         row = draft_rows[0]
         run_query(
-            "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(:Term {name: $name}) "
-            "DETACH DELETE d",
-            name=name,
-        )
-        run_query(
             "MATCH (t:Term {name: $name}) "
             "CREATE (c:Change {field: 'definition', oldValue: $current, newValue: $proposed, "
             "changedBy: $changed_by, changedAt: datetime(), action: 'reject_edit', reason: $reason}) "
@@ -103,12 +98,20 @@ def reject(name: str, changed_by: str, reason: str) -> None:
             name=name, current=row["current_definition"], proposed=row["proposed_definition"],
             changed_by=changed_by, reason=reason,
         )
+        run_query(
+            "MATCH (d:Draft {status: 'pending_review'})-[:DRAFT_OF]->(:Term {name: $name}) "
+            "DETACH DELETE d",
+            name=name,
+        )
         return
 
-    run_query(
-        "MATCH (t:Term {name: $name, status: 'pending_review'}) SET t.status = 'draft'",
+    rows = run_query(
+        "MATCH (t:Term {name: $name, status: 'pending_review'}) SET t.status = 'draft' "
+        "RETURN t.name AS name",
         name=name,
     )
+    if not rows:
+        raise LookupError(f"No pending review found for term '{name}'")
     run_query(
         "MATCH (t:Term {name: $name}) "
         "CREATE (c:Change {field: 'status', oldValue: 'pending_review', newValue: 'draft', "

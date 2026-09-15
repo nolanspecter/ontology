@@ -16,4 +16,4 @@ class QueueItem(BaseModel):
 
 
 class RejectRequest(BaseModel):
-    reason: str
+    reason: str = Field(min_length=1)

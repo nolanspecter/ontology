@@ -207,6 +207,17 @@ def test_unauthenticated_request_rejected():
     assert response.status_code == 401
 
 
+def test_reject_via_json_api_rejects_empty_reason():
+    apply_constraints()
+    _make_term("Cash")
+    client.post("/terms/Cash/submit")
+    _as(Role.REVIEWER)
+
+    response = client.post("/review/Cash/reject", json={"reason": ""})
+    assert response.status_code == 422
+    _clear_auth_override()
+
+
 def test_reject_edit_records_change_with_reason():
     apply_constraints()
     _make_term("Cash")
