@@ -104,6 +104,9 @@ def create_term_page(
                 },
             )
         term_service.create_relation(term.name, target, RelationType(relation_type))
+    if user.role == Role.ADMIN:
+        review_service.submit_new_term(term.name)
+        review_service.approve(term.name, changed_by=user.email)
     return RedirectResponse(url=f"/app/terms/{term.name}", status_code=303)
 
 
@@ -233,4 +236,21 @@ def add_relation_page(
             },
         )
     term_service.create_relation(name, target, relation_type)
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/relations/remove")
+def remove_relation_page(
+    name: str,
+    request: Request,
+    target: str = Form(""),
+    relation_type: RelationType = Form(...),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    term_service.remove_relation(name, target, relation_type)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)

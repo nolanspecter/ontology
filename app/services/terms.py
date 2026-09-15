@@ -42,6 +42,13 @@ def create_relation(source: str, target: str, relation_type: RelationType) -> No
     )
 
 
+def remove_relation(source: str, target: str, relation_type: RelationType) -> None:
+    run_query(
+        f"MATCH (a:Term {{name: $source}})-[r:{relation_type.value}]->(b:Term {{name: $target}}) DELETE r",
+        source=source, target=target,
+    )
+
+
 def list_related(name: str) -> list[RelatedTermOut]:
     rows = run_query(
         "MATCH (:Term {name: $name})-[r]->(t:Term) "

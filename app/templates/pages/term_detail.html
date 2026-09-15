@@ -6,7 +6,17 @@
 
 <h2>Related</h2>
 <ul>
-{% for r in related %}<li>{{ r.relation_type.value }} &rarr; {{ r.name }}</li>{% else %}<li>None yet.</li>{% endfor %}
+{% for r in related %}
+<li>{{ r.relation_type.value }} &rarr; <a href="/app/terms/{{ r.name }}">{{ r.name }}</a>
+  {% if current_user.role in ("editor", "admin") %}
+  <form method="post" action="/app/terms/{{ term.name }}/relations/remove" style="display:inline">
+    <input type="hidden" name="target" value="{{ r.name }}">
+    <input type="hidden" name="relation_type" value="{{ r.relation_type.value }}">
+    <button type="submit" class="btn-ghost btn-icon" aria-label="Remove relation to {{ r.name }}">&times;</button>
+  </form>
+  {% endif %}
+</li>
+{% else %}<li>None yet.</li>{% endfor %}
 </ul>
 
 {% if current_user.role in ("editor", "admin") %}

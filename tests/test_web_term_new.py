@@ -165,6 +165,62 @@ def test_new_term_form_without_target_creates_term_with_no_relations():
     assert term_service.list_related("Cash") == []
 
 
+def test_admin_creating_term_skips_review():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.ADMIN)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    assert term_service.get_term("Cash").status == "published"
+
+
+def test_admin_bypass_records_audit_change():
+    from app.services import review as review_service
+
+    apply_constraints()
+    _login_as(Role.ADMIN)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    changes = review_service.list_changes("Cash")
+    assert changes[-1]["action"] == "approve_new"
+    assert changes[-1]["changedBy"] == "u@corp.com"
+
+
+def test_admin_bypass_does_not_apply_when_relation_target_invalid():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.ADMIN)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Cash",
+            "definition": "Money",
+            "formula": "",
+            "target": "DoesNotExist",
+            "relation_type": "COMPUTED_FROM",
+        },
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert term_service.get_term("Cash").status == "draft"
+
+
+def test_editor_creating_term_still_requires_review():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    assert term_service.get_term("Cash").status == "draft"
+
+
 def test_new_term_form_unknown_relation_target_shows_error_but_keeps_term():
     from app.services import terms as term_service
 

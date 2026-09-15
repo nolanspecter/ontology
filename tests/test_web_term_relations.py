@@ -88,3 +88,54 @@ def test_add_relation_form_requires_editor_role():
     )
     assert response.status_code == 403
     _logout()
+
+
+def test_remove_relation_form_deletes_relation_and_redirects():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/Cash/relations", data={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"}
+    )
+
+    response = client.post(
+        "/app/terms/Cash/relations/remove",
+        data={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/app/terms/Cash"
+    assert list_related("Cash") == []
+    _logout()
+
+
+def test_remove_relation_form_requires_editor_role():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/Cash/relations", data={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"}
+    )
+    _login_as(Role.REVIEWER)
+
+    response = client.post(
+        "/app/terms/Cash/relations/remove",
+        data={"target": "Receivable Cash", "relation_type": "COMPUTED_FROM"},
+    )
+    assert response.status_code == 403
+    assert len(list_related("Cash")) == 1
+    _logout()
+
+
+def test_remove_relation_form_404s_for_unknown_source_term():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/DoesNotExist/relations/remove",
+        data={"target": "Cash", "relation_type": "COMPUTED_FROM"},
+    )
+    assert response.status_code == 404
+    _logout()

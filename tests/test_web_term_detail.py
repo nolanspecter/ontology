@@ -28,6 +28,7 @@ def test_term_detail_page_shows_definition_and_related():
     assert response.status_code == 200
     assert "Money on hand" in response.text
     assert "Receivable Cash" in response.text
+    assert '<a href="/app/terms/Receivable Cash">Receivable Cash</a>' in response.text
     _logout()
 
 

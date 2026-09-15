@@ -127,6 +127,14 @@ button.btn-ghost {
   font-weight: 500;
 }
 button.btn-ghost:hover { background: var(--neutral-bg); color: var(--text); }
+button.btn-icon {
+  padding: 0 var(--space-2);
+  line-height: 1.6;
+  font-size: 1rem;
+  border-radius: 999px;
+  border-color: transparent;
+}
+button.btn-icon:hover { color: var(--danger); background: var(--danger-bg); }
 
 .badge {
   display: inline-block;
