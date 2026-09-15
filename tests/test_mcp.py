@@ -12,7 +12,7 @@ async def test_mcp_exposes_only_read_tools():
         tools = await client.list_tools()
         tool_names = {t.name for t in tools}
         assert any("get_term" in n for n in tool_names)
-        assert tool_names == {"get_term_terms", "list_related_terms", "search_term_search_get"}
+        assert tool_names == {"get_term", "list_related_terms", "search_term"}
 
 
 @pytest.mark.asyncio
