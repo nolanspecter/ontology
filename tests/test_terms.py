@@ -280,6 +280,25 @@ def test_set_category_none_clears_it():
     assert term_service.get_term("Cash").category is None
 
 
+def test_set_category_whitespace_only_clears_it_like_none():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+    term_service.attach_category("Cash", "Liquidity")
+
+    term_service.set_category("Cash", "   ")
+
+    assert term_service.get_term("Cash").category is None
+
+
+def test_set_category_strips_surrounding_whitespace():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})
+
+    term_service.set_category("Cash", "  Liquidity  ")
+
+    assert term_service.get_term("Cash").category == "Liquidity"
+
+
 def test_json_api_set_category():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "Money", "formula": None})

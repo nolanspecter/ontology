@@ -92,10 +92,15 @@ def attach_category(term_name: str, category_name: str) -> None:
 
 
 def set_category(term_name: str, category_name: str | None) -> None:
+    category_name = category_name.strip() if category_name else None
     run_query(
         "MATCH (t:Term {name: $term_name})-[r:HAS_CATEGORY]->() DELETE r",
         term_name=term_name,
     )
+    # A term moving to a new category can leave its old Category node with no
+    # remaining HAS_CATEGORY edges. Left in place deliberately (matches
+    # list_categories()'s current behavior of never pruning) — it just means
+    # an unused category name lingers in the autocomplete until reused.
     if category_name:
         attach_category(term_name, category_name)
 

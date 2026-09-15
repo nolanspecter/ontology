@@ -70,7 +70,7 @@
 <form method="post" action="/app/terms/{{ term.name }}/category">
   <input type="text" name="category" list="category-options" value="{{ term.category or '' }}">
   <datalist id="category-options">
-    {% for c in categories %}<option value="{{ c }}">{% endfor %}
+    {% for c in categories|default([]) %}<option value="{{ c }}">{% endfor %}
   </datalist>
   <button type="submit">Save category</button>
 </form>
