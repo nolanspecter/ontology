@@ -50,3 +50,40 @@ def test_callback_syncs_user_and_sets_session(monkeypatch):
     response = client.get("/auth/callback", follow_redirects=False)
     assert response.status_code in (302, 307)
     assert "session" in response.cookies
+
+
+def test_login_page_renders_dev_form_in_dev_mode():
+    client = TestClient(app)
+    response = client.get("/auth/login")
+    assert response.status_code == 200
+    assert "<form" in response.text
+    assert 'name="email"' in response.text
+    assert 'name="password"' in response.text
+
+
+def test_dev_login_succeeds_with_valid_credentials():
+    sync_user(email="frank@corp.com", groups=[])
+    client = TestClient(app)
+    response = client.post(
+        "/auth/dev-login", data={"email": "frank@corp.com", "password": settings.dev_login_password},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "session" in response.cookies
+
+
+def test_dev_login_rejects_wrong_password():
+    sync_user(email="frank@corp.com", groups=[])
+    client = TestClient(app)
+    response = client.post("/auth/dev-login", data={"email": "frank@corp.com", "password": "wrong"})
+    assert response.status_code == 401
+    assert "invalid" in response.text.lower()
+
+
+def test_dev_login_rejects_unknown_email():
+    client = TestClient(app)
+    response = client.post(
+        "/auth/dev-login", data={"email": "nobody@corp.com", "password": settings.dev_login_password}
+    )
+    assert response.status_code == 401
+    assert "invalid" in response.text.lower()

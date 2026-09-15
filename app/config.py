@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     oidc_client_secret: str = ""
     oidc_server_metadata_url: str = ""
     session_secret_key: str = "dev-secret-change-in-production"
+    dev_login_password: str = "dev"
 
     class Config:
         env_file = ".env"

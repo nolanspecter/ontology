@@ -1,8 +1,9 @@
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Form
 from starlette.responses import RedirectResponse
 from app.config import settings
-from app.services.auth import sync_user
+from app.services.auth import sync_user, get_user
+from app.web.templates import templates
 
 oauth = OAuth()
 oauth.register(
@@ -18,8 +19,26 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/login")
 async def login(request: Request):
+    if settings.env == "dev":
+        return templates.TemplateResponse(request, "pages/dev_login.html", {"current_user": None, "error": None})
     redirect_uri = request.url_for("auth_callback")
     return await oauth.corp_idp.authorize_redirect(request, redirect_uri)
+
+
+if settings.env == "dev":
+
+    @router.post("/dev-login")
+    async def dev_login(request: Request, email: str = Form(""), password: str = Form("")):
+        user = get_user(email) if email else None
+        if user is None or password != settings.dev_login_password:
+            return templates.TemplateResponse(
+                request,
+                "pages/dev_login.html",
+                {"current_user": None, "error": "Invalid email or password."},
+                status_code=401,
+            )
+        request.session["user_email"] = user.email
+        return RedirectResponse(url="/", status_code=302)
 
 
 @router.get("/callback", name="auth_callback")
