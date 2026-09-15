@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Form
+from starlette.responses import RedirectResponse
+from pydantic import ValidationError
 from app.web.templates import templates, is_htmx
 from app.web.deps import require_web_role
 from app.services import terms as term_service
-from app.models.user import UserOut
+from app.models.user import UserOut, Role
+from app.models.term import TermCreate
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -25,6 +28,36 @@ def search_terms(
     }
     template = "pages/_term_results.html" if is_htmx(request) else "pages/term_search.html"
     return templates.TemplateResponse(request, template, context)
+
+
+@router.get("/new")
+def new_term_form(request: Request, user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN))):
+    return templates.TemplateResponse(request, "pages/term_form.html", {"current_user": user})
+
+
+@router.post("/new")
+def create_term_page(
+    request: Request,
+    name: str = Form(""),
+    definition: str = Form(""),
+    formula: str = Form(""),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    try:
+        data = TermCreate(name=name, definition=definition, formula=formula or None)
+    except ValidationError as e:
+        errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
+        return templates.TemplateResponse(
+            request,
+            "pages/term_form.html",
+            {
+                "current_user": user,
+                "errors": errors,
+                "values": {"name": name, "definition": definition, "formula": formula},
+            },
+        )
+    term = term_service.create_term(data)
+    return RedirectResponse(url=f"/app/terms/{term.name}", status_code=303)
 
 
 @router.get("/{name}")

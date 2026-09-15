@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>New Term</h1>
+<form method="post" action="/app/terms/new">
+  <label>Name <input type="text" name="name" value="{{ values.name if values else '' }}"></label>
+  {% if errors and errors.name %}<p class="error">{{ errors.name }}</p>{% endif %}
+
+  <label>Definition <textarea name="definition">{{ values.definition if values else '' }}</textarea></label>
+  {% if errors and errors.definition %}<p class="error">{{ errors.definition }}</p>{% endif %}
+
+  <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else '' }}"></label>
+  <button type="submit">Create draft</button>
+</form>
+{% endblock %}

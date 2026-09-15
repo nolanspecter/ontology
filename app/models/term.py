@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 
 class TermCreate(BaseModel):
-    name: str
-    definition: str
+    name: str = Field(min_length=1)
+    definition: str = Field(min_length=1)
     formula: str | None = None
 
 
