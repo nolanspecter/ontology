@@ -57,3 +57,7 @@ def handle_web_forbidden(request, exc):
     return templates.TemplateResponse(
         request, "pages/forbidden.html", {"current_user": get_web_user(request)}, status_code=403
     )
+
+
+from app.public_api import public_app
+app.mount("/public", public_app)
