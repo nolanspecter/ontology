@@ -1,14 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>New Term</h1>
-<form method="post" action="/app/terms/new">
+<h1>{{ "Edit" if term else "New" }} Term{% if term %}: {{ term.name }}{% endif %}</h1>
+{% if conflict %}<p class="error">This term changed since you loaded this page — reload to see the latest version.</p>{% endif %}
+<form method="post" action="{{ '/app/terms/' + term.name + '/edit' if term else '/app/terms/new' }}">
+  {% if not term %}
   <label>Name <input type="text" name="name" value="{{ values.name if values else '' }}"></label>
   {% if errors and errors.name %}<p class="error">{{ errors.name }}</p>{% endif %}
+  {% else %}
+  <input type="hidden" name="expected_version" value="{{ term.version }}">
+  {% endif %}
 
-  <label>Definition <textarea name="definition">{{ values.definition if values else '' }}</textarea></label>
+  <label>Definition <textarea name="definition">{{ values.definition if values else (term.definition if term else '') }}</textarea></label>
   {% if errors and errors.definition %}<p class="error">{{ errors.definition }}</p>{% endif %}
 
-  <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else '' }}"></label>
-  <button type="submit">Create draft</button>
+  <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else (term.formula if term and term.formula else '') }}"></label>
+  <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
 </form>
 {% endblock %}

@@ -4,8 +4,10 @@ from pydantic import ValidationError
 from app.web.templates import templates, is_htmx
 from app.web.deps import require_web_role
 from app.services import terms as term_service
+from app.services import review as review_service
 from app.models.user import UserOut, Role
 from app.models.term import TermCreate
+from app.models.review import EditSubmit
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -71,3 +73,36 @@ def term_detail(name: str, request: Request, user: UserOut = Depends(require_web
     return templates.TemplateResponse(
         request, "pages/term_detail.html", {"current_user": user, "term": term, "related": related}
     )
+
+
+@router.get("/{name}/edit")
+def edit_term_form(name: str, request: Request, user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN))):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    return templates.TemplateResponse(request, "pages/term_form.html", {"current_user": user, "term": term})
+
+
+@router.post("/{name}/edit")
+def submit_edit_page(
+    name: str,
+    request: Request,
+    definition: str = Form(""),
+    formula: str = Form(""),
+    expected_version: int = Form(...),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    try:
+        review_service.submit_edit(
+            name, EditSubmit(definition=definition, formula=formula or None, expected_version=expected_version)
+        )
+    except (review_service.VersionConflict, ValueError):
+        return templates.TemplateResponse(
+            request,
+            "pages/term_form.html",
+            {"current_user": user, "term": term, "conflict": True, "values": {"definition": definition, "formula": formula}},
+        )
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
