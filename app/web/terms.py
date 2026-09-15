@@ -120,10 +120,21 @@ def term_detail(name: str, request: Request, user: UserOut = Depends(require_web
             request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
         )
     related = term_service.list_related(name)
+    pending_edit = review_service.get_queue_item(name)
+    if pending_edit is not None and pending_edit.kind != "edit":
+        pending_edit = None
+    changes = review_service.list_changes(name)
     return templates.TemplateResponse(
         request,
         "pages/term_detail.html",
-        {"current_user": user, "term": term, "related": related, "other_terms": _other_term_names(name)},
+        {
+            "current_user": user,
+            "term": term,
+            "related": related,
+            "other_terms": _other_term_names(name),
+            "pending_edit": pending_edit,
+            "changes": changes,
+        },
     )
 
 

@@ -160,6 +160,15 @@ button.btn-icon:hover { color: var(--danger); background: var(--danger-bg); }
   display: inline-block;
 }
 
+.notice {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9rem;
+  margin: 0 0 var(--space-4);
+}
+
 ul { padding-left: 0; list-style: none; margin: 0; }
 main ul li {
   padding: var(--space-3) 0;

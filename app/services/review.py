@@ -100,9 +100,16 @@ def list_changes(name: str) -> list[dict]:
     return run_query(
         "MATCH (:Term {name: $name})-[:HAS_CHANGE]->(c:Change) "
         "RETURN c.field AS field, c.oldValue AS oldValue, c.newValue AS newValue, "
-        "c.changedBy AS changedBy, c.action AS action ORDER BY c.changedAt",
+        "c.changedBy AS changedBy, c.action AS action, c.changedAt AS changedAt ORDER BY c.changedAt",
         name=name,
     )
+
+
+def get_queue_item(name: str) -> QueueItem | None:
+    for item in get_review_queue():
+        if item.term_name == name:
+            return item
+    return None
 
 
 def get_review_queue() -> list[QueueItem]:

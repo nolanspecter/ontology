@@ -75,6 +75,51 @@ def test_detail_page_shows_own_draft():
     _logout()
 
 
+def test_detail_page_shows_pending_edit_callout_for_published_term():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    client.post("/terms/Cash/submit")
+    client.post("/review/Cash/approve", json={"changed_by": "alice@corp.com"})
+    client.post(
+        "/terms/Cash/edits",
+        json={"definition": "Liquid assets", "formula": None, "expected_version": 1},
+    )
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert response.status_code == 200
+    assert "pending" in response.text.lower()
+    assert "Liquid assets" in response.text
+    _logout()
+
+
+def test_detail_page_no_pending_callout_when_nothing_pending():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert "pending review" not in response.text.lower()
+    _logout()
+
+
+def test_detail_page_shows_change_history():
+    # /review/{name}/approve's changed_by comes from the authenticated user
+    # (Phase 3), not a request body field -- the JSON body here is a no-op;
+    # the autouse admin fixture is who actually gets recorded.
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    client.post("/terms/Cash/submit")
+    client.post("/review/Cash/approve", json={})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert response.status_code == 200
+    assert "History" in response.text
+    assert "admin@corp.com" in response.text
+    _logout()
+
+
 def test_detail_page_shows_admin_other_users_draft():
     apply_constraints()
     _login_as(Role.EDITOR, email="alice@corp.com")

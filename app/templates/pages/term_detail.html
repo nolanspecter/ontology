@@ -4,6 +4,10 @@
 <p>{{ term.definition }}</p>
 {% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
 
+{% if pending_edit %}
+<p class="notice">An edit is pending review: "{{ pending_edit.definition }}"{% if pending_edit.formula %}, formula <code>{{ pending_edit.formula }}</code>{% endif %}.</p>
+{% endif %}
+
 <h2>Related</h2>
 <ul>
 {% for r in related %}
@@ -45,4 +49,11 @@
 </form>
 {% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}
 {% endif %}
+
+<h2>History</h2>
+<ul>
+{% for c in changes|default([]) %}
+<li>{{ c.changedAt }} — {{ c.action }} by {{ c.changedBy }}: {{ c.field }} "{{ c.oldValue }}" &rarr; "{{ c.newValue }}"{% if c.reason %} ({{ c.reason }}){% endif %}</li>
+{% else %}<li>No changes yet.</li>{% endfor %}
+</ul>
 {% endblock %}

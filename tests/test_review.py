@@ -69,6 +69,44 @@ def test_review_queue_lists_new_terms_and_edits():
     assert ("edit", "Subaccount") in kinds
 
 
+def test_get_queue_item_returns_pending_edit_for_published_term():
+    from app.services import review as review_service
+
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+    client.post(
+        "/terms/Cash/edits",
+        json={"definition": "revised", "formula": None, "expected_version": 1},
+    )
+
+    item = review_service.get_queue_item("Cash")
+    assert item is not None
+    assert item.kind == "edit"
+    assert item.definition == "revised"
+
+
+def test_get_queue_item_returns_none_when_nothing_pending():
+    from app.services import review as review_service
+
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+
+    assert review_service.get_queue_item("Cash") is None
+
+
+def test_list_changes_includes_timestamp():
+    from app.services import review as review_service
+
+    apply_constraints()
+    _make_term("Cash")
+    _publish("Cash")
+
+    changes = review_service.list_changes("Cash")
+    assert changes[-1]["changedAt"] is not None
+
+
 def test_approve_new_term_publishes_it():
     apply_constraints()
     _make_term("Cash")
