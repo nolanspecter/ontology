@@ -17,6 +17,47 @@
   <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else (term.formula if term and term.formula else '') }}"></label>
 
   {% if not term %}
+  {% if kind_error %}<p class="error">{{ kind_error }}</p>{% endif %}
+  <label>Kind (optional)
+    <select name="kind" id="kind-select" onchange="updateKindProperties()">
+      <option value="">— none —</option>
+      {% for k in term_kinds %}
+      <option value="{{ k }}"{% if values and values.kind == k %} selected{% endif %}>{{ k }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if errors and errors.kind %}<p class="error">{{ errors.kind }}</p>{% endif %}
+
+  {% for kind_name, props in term_kinds.items() %}
+  <div data-kind="{{ kind_name }}" style="display:none">
+    {% for p in props %}
+    <label>{{ kind_name }} {{ p.name }}{% if p.required %} (required){% else %} (optional){% endif %}
+      <input type="text" name="kindprop_{{ p.name }}" disabled>
+    </label>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <script>
+  function updateKindProperties() {
+    var selected = document.getElementById('kind-select').value;
+    document.querySelectorAll('[data-kind]').forEach(function (block) {
+      var active = block.dataset.kind === selected;
+      block.style.display = active ? 'block' : 'none';
+      block.querySelectorAll('input').forEach(function (input) { input.disabled = !active; });
+    });
+  }
+  </script>
+
+  <label>Extra properties (optional, any name/value — must not reuse a Kind property name above)</label>
+  <label>Property 1 name <input type="text" name="extra_name_1"></label>
+  <label>Property 1 value <input type="text" name="extra_value_1"></label>
+  <label>Property 2 name <input type="text" name="extra_name_2"></label>
+  <label>Property 2 value <input type="text" name="extra_value_2"></label>
+  <label>Property 3 name <input type="text" name="extra_name_3"></label>
+  <label>Property 3 value <input type="text" name="extra_value_3"></label>
+  {% endif %}
+
+  {% if not term %}
   <label>Category (optional) <input type="text" name="category" list="category-options" value="{{ values.category if values else '' }}"></label>
   <datalist id="category-options">
     {% for c in categories %}<option value="{{ c }}">{% endfor %}

@@ -8,6 +8,7 @@ from app.services import review as review_service
 from app.models.user import UserOut, Role
 from app.models.term import TermCreate, TermOut
 from app.models.review import EditSubmit
+from app.models.term_kind import TERM_KINDS
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -56,12 +57,13 @@ def new_term_form(request: Request, user: UserOut = Depends(require_web_role(Rol
             "categories": term_service.list_categories(),
             "all_terms": term_service.list_terms(),
             "relation_types": term_service.list_relation_types(),
+            "term_kinds": TERM_KINDS,
         },
     )
 
 
 @router.post("/new")
-def create_term_page(
+async def create_term_page(
     request: Request,
     name: str = Form(""),
     definition: str = Form(""),
@@ -70,23 +72,73 @@ def create_term_page(
     target: str = Form(""),
     relation_type: str = Form(""),
     new_relation_type: str = Form(""),
+    kind: str = Form(""),
+    extra_name_1: str = Form(""),
+    extra_value_1: str = Form(""),
+    extra_name_2: str = Form(""),
+    extra_value_2: str = Form(""),
+    extra_name_3: str = Form(""),
+    extra_value_3: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
     relation_type = new_relation_type.strip() or relation_type
+    kind = kind or None
+    properties: dict[str, str] = {}
+    kind_error = None
+    if kind:
+        if kind not in TERM_KINDS:
+            kind_error = f"unknown kind '{kind}'"
+        else:
+            form_data = await request.form()
+            for prop_def in TERM_KINDS[kind]:
+                value = str(form_data.get(f"kindprop_{prop_def.name}", "")).strip()
+                if value:
+                    properties[prop_def.name] = value
+            base_names = {p.name for p in TERM_KINDS[kind]}
+            for extra_name, extra_value in (
+                (extra_name_1, extra_value_1),
+                (extra_name_2, extra_value_2),
+                (extra_name_3, extra_value_3),
+            ):
+                extra_name = extra_name.strip()
+                extra_value = extra_value.strip()
+                if not extra_name:
+                    continue
+                if extra_name in base_names:
+                    kind_error = f"'{extra_name}' is already a {kind} property — pick a different name for an extra property"
+                    break
+                properties[extra_name] = extra_value
+
+    if kind_error:
+        return templates.TemplateResponse(
+            request,
+            "pages/term_form.html",
+            {
+                "current_user": user,
+                "kind_error": kind_error,
+                "values": {"name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or ""},
+                "categories": term_service.list_categories(),
+                "all_terms": term_service.list_terms(),
+                "relation_types": term_service.list_relation_types(),
+                "term_kinds": TERM_KINDS,
+            },
+        )
+
     try:
-        data = TermCreate(name=name, definition=definition, formula=formula or None)
+        data = TermCreate(name=name, definition=definition, formula=formula or None, kind=kind, properties=properties)
     except ValidationError as e:
-        errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
+        errors = {(err["loc"][-1] if err["loc"] else "kind"): err["msg"] for err in e.errors()}
         return templates.TemplateResponse(
             request,
             "pages/term_form.html",
             {
                 "current_user": user,
                 "errors": errors,
-                "values": {"name": name, "definition": definition, "formula": formula, "category": category},
+                "values": {"name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or ""},
                 "categories": term_service.list_categories(),
                 "all_terms": term_service.list_terms(),
                 "relation_types": term_service.list_relation_types(),
+                "term_kinds": TERM_KINDS,
             },
         )
     term = term_service.create_term(data, created_by=user.email)

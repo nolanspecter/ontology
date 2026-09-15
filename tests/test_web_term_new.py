@@ -243,3 +243,99 @@ def test_new_term_form_unknown_relation_target_shows_error_but_keeps_term():
     assert "not found" in response.text.lower()
     assert term_service.get_term("Cash") is not None
     assert term_service.list_related("Cash") == []
+
+
+def test_new_term_form_shows_kind_dropdown():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/new")
+    assert response.status_code == 200
+    assert '<select name="kind"' in response.text
+    assert '<option value="Person">Person</option>' in response.text
+    assert '<option value="Business">Business</option>' in response.text
+    _logout()
+
+
+def test_new_term_form_creates_term_with_kind_and_required_property():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/new",
+        data={
+            "name": "Alice Smith", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+        },
+    )
+    _logout()
+
+    term = term_service.get_term("Alice Smith")
+    assert term.kind == "Person"
+    assert term.properties == {"title": "CFO"}
+
+
+def test_new_term_form_missing_required_kind_property_shows_error():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/new",
+        data={"name": "Alice Smith", "definition": "A person", "formula": "", "kind": "Person"},
+    )
+    assert response.status_code == 200
+    assert "missing required" in response.text.lower()
+    _logout()
+
+
+def test_new_term_form_accepts_free_extra_property():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/new",
+        data={
+            "name": "Alice Smith", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name_1": "favorite_color", "extra_value_1": "teal",
+        },
+    )
+    _logout()
+
+    term = term_service.get_term("Alice Smith")
+    assert term.properties == {"title": "CFO", "favorite_color": "teal"}
+
+
+def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Alice Smith", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name_1": "title", "extra_value_1": "duplicate",
+        },
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert "already a" in response.text.lower()
+    assert term_service.get_term("Alice Smith") is None
+
+
+def test_new_term_form_without_kind_creates_term_with_no_properties():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    _logout()
+
+    term = term_service.get_term("Cash")
+    assert term.kind is None
+    assert term.properties == {}
