@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
+from app.schema import apply_constraints
 
 client = TestClient(app)
 
@@ -35,4 +36,16 @@ def test_review_page_shows_empty_state_for_reviewer():
     assert response.status_code == 200
     assert "No pending items" in response.text
     assert "u@corp.com" in response.text
+    _logout()
+
+
+def test_review_page_lists_pending_items():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms/Cash/submit")
+    _login_as(Role.REVIEWER)
+
+    response = client.get("/app/review")
+    assert response.status_code == 200
+    assert "Cash" in response.text
     _logout()
