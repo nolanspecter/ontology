@@ -234,6 +234,40 @@ def submit_term_page(
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
 
 
+@router.get("/{name}/delete")
+def delete_term_confirm(name: str, request: Request, user: UserOut = Depends(require_web_role(Role.ADMIN))):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    return templates.TemplateResponse(
+        request, "pages/term_delete_confirm.html", {"current_user": user, "term": term}
+    )
+
+
+@router.post("/{name}/delete")
+def delete_term_page(
+    name: str,
+    request: Request,
+    confirm_name: str = Form(""),
+    user: UserOut = Depends(require_web_role(Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    if confirm_name != name:
+        return templates.TemplateResponse(
+            request,
+            "pages/term_delete_confirm.html",
+            {"current_user": user, "term": term, "error": "Typed name didn't match — nothing was deleted."},
+        )
+    term_service.delete_term(name)
+    return RedirectResponse(url="/app/terms", status_code=303)
+
+
 @router.post("/{name}/relations")
 def add_relation_page(
     name: str,

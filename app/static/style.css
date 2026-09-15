@@ -136,6 +136,19 @@ button.btn-icon {
 }
 button.btn-icon:hover { color: var(--danger); background: var(--danger-bg); }
 
+.btn-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.btn-danger:hover { background: var(--danger); color: var(--accent-contrast); }
+.btn-danger:disabled {
+  background: var(--neutral-bg);
+  color: var(--text-muted);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
 .badge {
   display: inline-block;
   font-size: 0.75rem;

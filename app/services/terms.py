@@ -18,6 +18,15 @@ def create_term(data: TermCreate, created_by: str | None = None) -> TermOut:
     return TermOut(**rows[0])
 
 
+def delete_term(name: str) -> None:
+    rows = run_query(
+        "MATCH (t:Term {name: $name}) DETACH DELETE t RETURN count(t) AS deleted",
+        name=name,
+    )
+    if rows[0]["deleted"] == 0:
+        raise LookupError(f"No term named '{name}'")
+
+
 def get_term(name: str) -> TermOut | None:
     rows = run_query(
         "MATCH (t:Term {name: $name}) RETURN t.name AS name, t.definition AS definition, "
