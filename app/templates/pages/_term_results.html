@@ -1,0 +1,5 @@
+{% for t in results %}
+<li><a href="/app/terms/{{ t.name }}">{{ t.name }}</a> — {{ t.definition }} <span class="badge">{{ t.status }}</span></li>
+{% else %}
+<li>No terms match.</li>
+{% endfor %}

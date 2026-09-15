@@ -9,6 +9,7 @@ from app.web.deps import WebAuthRequired, WebForbidden, get_web_user
 from app.web.templates import templates, is_htmx
 from app.web import review as web_review
 from app.web import home as web_home
+from app.web import terms as web_terms
 
 if settings.env != "dev" and settings.session_secret_key == "dev-secret-change-in-production":
     raise RuntimeError("SESSION_SECRET_KEY must be set to a real secret outside dev")
@@ -33,6 +34,7 @@ app.include_router(categories.router)
 app.include_router(auth_router.router)
 app.include_router(web_review.router)
 app.include_router(web_home.router)
+app.include_router(web_terms.router)
 
 
 app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
