@@ -94,6 +94,62 @@ def test_edit_form_creates_pending_review_draft():
     )
 
 
+def test_admin_edit_skips_review_and_applies_immediately():
+    from app.services.review import get_review_queue
+
+    apply_constraints()
+    _publish("Cash")
+    _login_as(Role.ADMIN)
+
+    response = client.post(
+        "/app/terms/Cash/edit",
+        data={"definition": "new def", "formula": "", "expected_version": "1"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    _logout()
+
+    term = client.get("/terms/Cash").json()
+    assert term["definition"] == "new def"
+    assert term["version"] == 2
+    assert term["status"] == "published"
+    assert get_review_queue() == []
+
+
+def test_admin_edit_records_audit_change():
+    from app.services import review as review_service
+
+    apply_constraints()
+    _publish("Cash")
+    _login_as(Role.ADMIN)
+
+    client.post(
+        "/app/terms/Cash/edit",
+        data={"definition": "new def", "formula": "", "expected_version": "1"},
+    )
+    _logout()
+
+    changes = review_service.list_changes("Cash")
+    assert changes[-1]["action"] == "approve_edit"
+    assert changes[-1]["changedBy"] == "u@corp.com"
+
+
+def test_editor_edit_still_requires_review():
+    apply_constraints()
+    _publish("Cash")
+    _login_as(Role.EDITOR)
+
+    client.post(
+        "/app/terms/Cash/edit",
+        data={"definition": "new def", "formula": "", "expected_version": "1"},
+    )
+    _logout()
+
+    term = client.get("/terms/Cash").json()
+    assert term["definition"] == "def"
+    assert term["version"] == 1
+
+
 def test_edit_form_stale_version_shows_conflict_banner():
     apply_constraints()
     _publish("Cash2")

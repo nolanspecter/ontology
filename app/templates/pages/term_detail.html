@@ -38,10 +38,10 @@
   <select name="target">
     {% for t in other_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
   </select>
-  <input type="text" name="relation_type" list="relation-type-options" placeholder="e.g. COMPUTED_FROM" value="COMPUTED_FROM">
-  <datalist id="relation-type-options">
-    {% for rt in relation_types %}<option value="{{ rt }}">{% endfor %}
-  </datalist>
+  <select name="relation_type">
+    {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
+  </select>
+  <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN"></label>
   <button type="submit">Add relation</button>
 </form>
 {% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}

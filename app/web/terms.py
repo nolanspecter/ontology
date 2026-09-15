@@ -69,8 +69,10 @@ def create_term_page(
     category: str = Form(""),
     target: str = Form(""),
     relation_type: str = Form(""),
+    new_relation_type: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
+    relation_type = new_relation_type.strip() or relation_type
     try:
         data = TermCreate(name=name, definition=definition, formula=formula or None)
     except ValidationError as e:
@@ -211,6 +213,8 @@ def submit_edit_page(
                 "values": {"definition": definition, "formula": formula},
             },
         )
+    if user.role == Role.ADMIN:
+        review_service.approve(name, changed_by=user.email)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
 
 
@@ -236,8 +240,10 @@ def add_relation_page(
     request: Request,
     target: str = Form(""),
     relation_type: str = Form(""),
+    new_relation_type: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
+    relation_type = new_relation_type.strip() or relation_type
     term = term_service.get_term(name)
     if term is None:
         return templates.TemplateResponse(

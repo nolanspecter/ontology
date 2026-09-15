@@ -161,6 +161,73 @@ def test_add_relation_form_rejects_invalid_relation_type_format():
     _logout()
 
 
+def test_relation_type_field_is_a_dropdown_of_existing_types():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.get("/app/terms/Cash")
+    assert '<select name="relation_type">' in response.text
+    assert '<option value="COMPUTED_FROM">COMPUTED_FROM</option>' in response.text
+    assert 'list="relation-type-options"' not in response.text
+    _logout()
+
+
+def test_add_relation_form_declares_a_brand_new_type_via_separate_field():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/relations",
+        data={"target": "Receivable Cash", "relation_type": "", "new_relation_type": "MENTIONED_IN"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert any(r.name == "Receivable Cash" and r.relation_type == "MENTIONED_IN" for r in list_related("Cash"))
+    _logout()
+
+
+def test_add_relation_form_new_type_field_takes_precedence_over_dropdown():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/relations",
+        data={
+            "target": "Receivable Cash",
+            "relation_type": "COMPUTED_FROM",
+            "new_relation_type": "MENTIONED_IN",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    related = list_related("Cash")
+    assert any(r.relation_type == "MENTIONED_IN" for r in related)
+    assert not any(r.relation_type == "COMPUTED_FROM" for r in related)
+    _logout()
+
+
+def test_add_relation_form_new_type_field_validates_format():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
+    client.post("/terms", json={"name": "Receivable Cash", "definition": "d2", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/relations",
+        data={"target": "Receivable Cash", "relation_type": "", "new_relation_type": "lowercase-type"},
+    )
+    assert response.status_code == 200
+    assert "uppercase" in response.text.lower()
+    assert list_related("Cash") == []
+    _logout()
+
+
 def test_remove_relation_form_404s_for_unknown_source_term():
     apply_constraints()
     _login_as(Role.EDITOR)
