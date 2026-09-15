@@ -1,21 +1,48 @@
 from app.db import run_query
 from app.models.term import TermCreate, TermOut
+from app.models.term_kind import TERM_KINDS
 from app.models.relation import RelatedTermOut, validate_relation_type
 
 BUILTIN_RELATION_TYPES = {"COMPUTED_FROM", "PART_OF", "OPPOSITE_OF", "SYNONYM_OF", "RELATED_TO"}
+_BASE_FIELDS = {"name", "definition", "formula", "status", "version", "createdBy"}
+
+
+def _term_out_from_row(row: dict) -> TermOut:
+    kind = next((label for label in row["labels"] if label != "Term"), None)
+    properties = {k: v for k, v in row["props"].items() if k not in _BASE_FIELDS}
+    return TermOut(
+        name=row["name"],
+        definition=row["definition"],
+        formula=row["formula"],
+        status=row["status"],
+        version=row["version"],
+        created_by=row["created_by"],
+        kind=kind,
+        properties=properties,
+    )
 
 
 def create_term(data: TermCreate, created_by: str | None = None) -> TermOut:
+    if data.kind is not None and data.kind not in TERM_KINDS:
+        raise ValueError(f"unknown kind '{data.kind}'")
+    props = {
+        "name": data.name,
+        "definition": data.definition,
+        "formula": data.formula,
+        "status": "draft",
+        "version": 1,
+        "createdBy": created_by,
+        **data.properties,
+    }
+    label_suffix = f":{data.kind}" if data.kind else ""
     rows = run_query(
-        """
-        CREATE (t:Term {name: $name, definition: $definition, formula: $formula,
-                         status: 'draft', version: 1, createdBy: $created_by})
-        RETURN t.name AS name, t.definition AS definition, t.formula AS formula,
-               t.status AS status, t.version AS version, t.createdBy AS created_by
-        """,
-        name=data.name, definition=data.definition, formula=data.formula, created_by=created_by,
+        f"CREATE (t:Term{label_suffix} $props) "
+        "RETURN t.name AS name, t.definition AS definition, t.formula AS formula, "
+        "t.status AS status, t.version AS version, t.createdBy AS created_by, "
+        "labels(t) AS labels, properties(t) AS props",
+        props=props,
     )
-    return TermOut(**rows[0])
+    return _term_out_from_row(rows[0])
 
 
 def delete_term(name: str) -> None:
@@ -32,10 +59,11 @@ def delete_term(name: str) -> None:
 def get_term(name: str) -> TermOut | None:
     rows = run_query(
         "MATCH (t:Term {name: $name}) RETURN t.name AS name, t.definition AS definition, "
-        "t.formula AS formula, t.status AS status, t.version AS version, t.createdBy AS created_by",
+        "t.formula AS formula, t.status AS status, t.version AS version, t.createdBy AS created_by, "
+        "labels(t) AS labels, properties(t) AS props",
         name=name,
     )
-    return TermOut(**rows[0]) if rows else None
+    return _term_out_from_row(rows[0]) if rows else None
 
 
 def attach_category(term_name: str, category_name: str) -> None:

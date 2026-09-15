@@ -144,3 +144,73 @@ def test_term_create_defaults_kind_and_properties_to_none_and_empty():
     term = TermCreate(name="Cash", definition="Money")
     assert term.kind is None
     assert term.properties == {}
+
+
+def test_create_term_with_kind_adds_matching_label():
+    from app.models.term import TermCreate
+    from app.db import run_query
+
+    apply_constraints()
+    term_service.create_term(
+        TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"})
+    )
+
+    rows = run_query("MATCH (t:Term {name: $name}) RETURN labels(t) AS labels", name="Alice Smith")
+    assert set(rows[0]["labels"]) == {"Term", "Person"}
+
+
+def test_create_term_without_kind_has_only_term_label():
+    from app.models.term import TermCreate
+    from app.db import run_query
+
+    apply_constraints()
+    term_service.create_term(TermCreate(name="Cash", definition="Money"))
+
+    rows = run_query("MATCH (t:Term {name: $name}) RETURN labels(t) AS labels", name="Cash")
+    assert rows[0]["labels"] == ["Term"]
+
+
+def test_get_term_returns_kind_and_properties():
+    from app.models.term import TermCreate
+
+    apply_constraints()
+    term_service.create_term(
+        TermCreate(
+            name="Alice Smith", definition="A person", kind="Person",
+            properties={"title": "CFO", "favorite_color": "teal"},
+        )
+    )
+
+    fetched = term_service.get_term("Alice Smith")
+    assert fetched.kind == "Person"
+    assert fetched.properties == {"title": "CFO", "favorite_color": "teal"}
+
+
+def test_get_term_without_kind_has_none_kind_and_empty_properties():
+    from app.models.term import TermCreate
+
+    apply_constraints()
+    term_service.create_term(TermCreate(name="Cash", definition="Money"))
+
+    fetched = term_service.get_term("Cash")
+    assert fetched.kind is None
+    assert fetched.properties == {}
+
+
+def test_json_api_round_trips_kind_and_properties():
+    apply_constraints()
+    response = client.post(
+        "/terms",
+        json={
+            "name": "Alice Smith", "definition": "A person", "formula": None,
+            "kind": "Person", "properties": {"title": "CFO"},
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["kind"] == "Person"
+    assert body["properties"] == {"title": "CFO"}
+
+    response = client.get("/terms/Alice Smith")
+    assert response.json()["kind"] == "Person"
+    assert response.json()["properties"] == {"title": "CFO"}
