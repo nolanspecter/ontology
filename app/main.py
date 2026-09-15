@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
 from app.config import settings
-from app.routers import terms, relations, review, auth as auth_router
+from app.routers import terms, relations, review, categories, auth as auth_router
 from app.web.deps import WebAuthRequired, WebForbidden, get_web_user
 from app.web.templates import templates, is_htmx
 from app.web import review as web_review
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(terms.router)
 app.include_router(relations.router)
 app.include_router(review.router)
+app.include_router(categories.router)
 app.include_router(auth_router.router)
 app.include_router(web_review.router)
 app.include_router(web_home.router)

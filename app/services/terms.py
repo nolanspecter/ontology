@@ -49,3 +49,21 @@ def list_related(name: str) -> list[RelatedTermOut]:
         name=name,
     )
     return [RelatedTermOut(**row) for row in rows]
+
+
+def list_terms(q: str | None = None, category: str | None = None, status: str | None = None) -> list[TermOut]:
+    rows = run_query(
+        "MATCH (t:Term) "
+        "WHERE ($q IS NULL OR toLower(t.name) CONTAINS toLower($q) OR toLower(t.definition) CONTAINS toLower($q)) "
+        "AND ($status IS NULL OR t.status = $status) "
+        "AND ($category IS NULL OR EXISTS { MATCH (t)-[:HAS_CATEGORY]->(c:Category {name: $category}) }) "
+        "RETURN t.name AS name, t.definition AS definition, t.formula AS formula, "
+        "t.status AS status, t.version AS version ORDER BY t.name",
+        q=q, category=category, status=status,
+    )
+    return [TermOut(**row) for row in rows]
+
+
+def list_categories() -> list[str]:
+    rows = run_query("MATCH (c:Category) RETURN c.name AS name ORDER BY c.name")
+    return [row["name"] for row in rows]

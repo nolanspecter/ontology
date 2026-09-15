@@ -12,6 +12,11 @@ def create_term(data: TermCreate, user: UserOut = Depends(require_role(Role.EDIT
     return term_service.create_term(data)
 
 
+@router.get("", response_model=list[TermOut])
+def list_terms(q: str | None = None, category: str | None = None, status: str | None = None):
+    return term_service.list_terms(q=q, category=category, status=status)
+
+
 @router.get("/{name}", response_model=TermOut)
 def get_term(name: str):
     term = term_service.get_term(name)
