@@ -11,8 +11,8 @@ async def test_mcp_exposes_only_read_tools():
     async with Client(mcp) as client:
         tools = await client.list_tools()
         tool_names = {t.name for t in tools}
-        assert "get_term_terms__name__get" in tool_names or any("get_term" in n for n in tool_names)
-        assert not any("submit" in n or "approve" in n or "reject" in n for n in tool_names)
+        assert any("get_term" in n for n in tool_names)
+        assert tool_names == {"get_term_terms", "list_related_terms"}
 
 
 @pytest.mark.asyncio

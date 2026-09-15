@@ -2,6 +2,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.public_api import public_app
 from app.schema import apply_constraints
+from app.models.term import TermCreate
+from app.services import terms as term_service
 
 main_client = TestClient(app)
 public_client = TestClient(public_app)
@@ -45,6 +47,20 @@ def test_public_api_shows_kind_and_properties_on_published_terms():
     body = response.json()
     assert body["kind"] == "Person"
     assert body["properties"] == {"title": "CFO"}
+
+
+def test_public_api_hides_created_by():
+    apply_constraints()
+    term_service.create_term(
+        TermCreate(name="Revenue", definition="Money in"),
+        created_by="someone@corp.com",
+    )
+    from app.db import run_query
+    run_query("MATCH (t:Term {name: 'Revenue'}) SET t.status = 'published'")
+
+    response = public_client.get("/terms/Revenue")
+    assert response.status_code == 200
+    assert "created_by" not in response.json()
 
 
 def test_public_api_related_filters_on_both_sides_publication():

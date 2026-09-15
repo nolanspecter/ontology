@@ -53,3 +53,16 @@ class TermOut(BaseModel):
     created_by: str | None = None
     kind: str | None = None
     properties: dict[str, str] = Field(default_factory=dict)
+
+
+class PublicTermOut(BaseModel):
+    """TermOut without created_by — used on the public/MCP surface so a web
+    author's email never appears in the response body or the OpenAPI schema
+    that FastMCP.from_fastapi() reads to build tool output schemas."""
+    name: str
+    definition: str
+    formula: str | None
+    status: Literal["draft", "pending_review", "published"]
+    version: int
+    kind: str | None = None
+    properties: dict[str, str] = Field(default_factory=dict)
