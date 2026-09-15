@@ -328,6 +328,26 @@ def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
     assert term_service.get_term("Alice Smith") is None
 
 
+def test_new_term_form_rejects_extra_property_colliding_with_reserved_field_name():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Bob Jones", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name_1": "status", "extra_value_1": "published",
+        },
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert "reserved" in response.text.lower()
+    assert term_service.get_term("Bob Jones") is None
+
+
 def test_new_term_form_without_kind_creates_term_with_no_properties():
     from app.services import terms as term_service
 

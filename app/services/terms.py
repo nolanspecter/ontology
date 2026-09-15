@@ -26,13 +26,13 @@ def create_term(data: TermCreate, created_by: str | None = None) -> TermOut:
     if data.kind is not None and data.kind not in TERM_KINDS:
         raise ValueError(f"unknown kind '{data.kind}'")
     props = {
+        **data.properties,
         "name": data.name,
         "definition": data.definition,
         "formula": data.formula,
         "status": "draft",
         "version": 1,
         "createdBy": created_by,
-        **data.properties,
     }
     label_suffix = f":{data.kind}" if data.kind else ""
     rows = run_query(
@@ -114,10 +114,11 @@ def list_terms(q: str | None = None, category: str | None = None, status: str | 
         "AND ($status IS NULL OR t.status = $status) "
         "AND ($category IS NULL OR EXISTS { MATCH (t)-[:HAS_CATEGORY]->(c:Category {name: $category}) }) "
         "RETURN t.name AS name, t.definition AS definition, t.formula AS formula, "
-        "t.status AS status, t.version AS version, t.createdBy AS created_by ORDER BY t.name",
+        "t.status AS status, t.version AS version, t.createdBy AS created_by, "
+        "labels(t) AS labels, properties(t) AS props ORDER BY t.name",
         q=q, category=category, status=status,
     )
-    return [TermOut(**row) for row in rows]
+    return [_term_out_from_row(row) for row in rows]
 
 
 def list_categories() -> list[str]:

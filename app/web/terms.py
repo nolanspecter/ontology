@@ -85,6 +85,7 @@ async def create_term_page(
     kind = kind or None
     properties: dict[str, str] = {}
     kind_error = None
+    base_names: set[str] = set()
     if kind:
         if kind not in TERM_KINDS:
             kind_error = f"unknown kind '{kind}'"
@@ -95,19 +96,23 @@ async def create_term_page(
                 if value:
                     properties[prop_def.name] = value
             base_names = {p.name for p in TERM_KINDS[kind]}
-            for extra_name, extra_value in (
-                (extra_name_1, extra_value_1),
-                (extra_name_2, extra_value_2),
-                (extra_name_3, extra_value_3),
-            ):
-                extra_name = extra_name.strip()
-                extra_value = extra_value.strip()
-                if not extra_name:
-                    continue
-                if extra_name in base_names:
-                    kind_error = f"'{extra_name}' is already a {kind} property — pick a different name for an extra property"
-                    break
-                properties[extra_name] = extra_value
+
+    if not kind_error:
+        for extra_name, extra_value in (
+            (extra_name_1, extra_value_1),
+            (extra_name_2, extra_value_2),
+            (extra_name_3, extra_value_3),
+        ):
+            extra_name = extra_name.strip()
+            extra_value = extra_value.strip()
+            if not extra_name:
+                continue
+            if not extra_value:
+                continue
+            if extra_name in base_names:
+                kind_error = f"'{extra_name}' is already a {kind} property — pick a different name for an extra property"
+                break
+            properties[extra_name] = extra_value
 
     if kind_error:
         return templates.TemplateResponse(
