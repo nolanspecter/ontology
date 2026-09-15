@@ -353,6 +353,43 @@ def test_new_term_form_rejects_extra_property_colliding_with_reserved_field_name
     assert term_service.get_term("Bob Jones") is None
 
 
+def test_new_term_form_validation_error_strips_raw_pydantic_prefix():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Bob Jones", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name_1": "status", "extra_value_1": "published",
+        },
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert "properties cannot use reserved field name(s): status" in response.text
+    assert "Value error" not in response.text
+
+
+def test_new_term_form_validation_error_preserves_kind_and_property_values():
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    response = client.post(
+        "/app/terms/new",
+        data={
+            "name": "Bob Jones", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name_1": "status", "extra_value_1": "published",
+        },
+    )
+    _logout()
+
+    assert response.status_code == 200
+    assert 'name="kindprop_title" value="CFO"' in response.text
+    assert 'name="extra_name_1" value="status"' in response.text
+    assert 'name="extra_value_1" value="published"' in response.text
+
+
 def test_new_term_form_without_kind_creates_term_with_no_properties():
     from app.services import terms as term_service
 

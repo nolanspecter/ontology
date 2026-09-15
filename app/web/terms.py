@@ -17,6 +17,17 @@ def _other_term_names(exclude_name: str) -> list[str]:
     return [t.name for t in term_service.list_terms() if t.name != exclude_name]
 
 
+def _validation_errors_to_dict(e: ValidationError, whole_model_field: str = "") -> dict[str, str]:
+    errors = {}
+    for err in e.errors():
+        field = err["loc"][-1] if err["loc"] else whole_model_field
+        msg = err["msg"]
+        if msg.startswith("Value error, "):
+            msg = msg[len("Value error, "):]
+        errors[field] = msg
+    return errors
+
+
 def _visible_to(term: TermOut, user: UserOut) -> bool:
     if term.status != "draft":
         return True
@@ -81,6 +92,7 @@ async def create_term_page(
     extra_value_3: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
+    form_data = await request.form()
     relation_type = new_relation_type.strip() or relation_type
     kind = kind or None
     properties: dict[str, str] = {}
@@ -90,7 +102,6 @@ async def create_term_page(
         if kind not in TERM_KINDS:
             kind_error = f"unknown kind '{kind}'"
         else:
-            form_data = await request.form()
             for prop_def in TERM_KINDS[kind]:
                 value = str(form_data.get(f"kindprop_{prop_def.name}", "")).strip()
                 if value:
@@ -114,6 +125,17 @@ async def create_term_page(
                 break
             properties[extra_name] = extra_value
 
+    values = {
+        "name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or "",
+        "extra_name_1": extra_name_1, "extra_value_1": extra_value_1,
+        "extra_name_2": extra_name_2, "extra_value_2": extra_value_2,
+        "extra_name_3": extra_name_3, "extra_value_3": extra_value_3,
+    }
+    kind_properties = {
+        prop_def.name: str(form_data.get(f"kindprop_{prop_def.name}", ""))
+        for props in TERM_KINDS.values() for prop_def in props
+    }
+
     if kind_error:
         return templates.TemplateResponse(
             request,
@@ -121,7 +143,8 @@ async def create_term_page(
             {
                 "current_user": user,
                 "kind_error": kind_error,
-                "values": {"name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or ""},
+                "values": values,
+                "kind_properties": kind_properties,
                 "categories": term_service.list_categories(),
                 "all_terms": term_service.list_terms(),
                 "relation_types": term_service.list_relation_types(),
@@ -132,14 +155,15 @@ async def create_term_page(
     try:
         data = TermCreate(name=name, definition=definition, formula=formula or None, kind=kind, properties=properties)
     except ValidationError as e:
-        errors = {(err["loc"][-1] if err["loc"] else "kind"): err["msg"] for err in e.errors()}
+        errors = _validation_errors_to_dict(e, whole_model_field="kind")
         return templates.TemplateResponse(
             request,
             "pages/term_form.html",
             {
                 "current_user": user,
                 "errors": errors,
-                "values": {"name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or ""},
+                "values": values,
+                "kind_properties": kind_properties,
                 "categories": term_service.list_categories(),
                 "all_terms": term_service.list_terms(),
                 "relation_types": term_service.list_relation_types(),
@@ -234,7 +258,7 @@ def submit_edit_page(
     try:
         data = EditSubmit(definition=definition, formula=formula or None, expected_version=expected_version)
     except ValidationError as e:
-        errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
+        errors = _validation_errors_to_dict(e)
         return templates.TemplateResponse(
             request,
             "pages/term_form.html",
