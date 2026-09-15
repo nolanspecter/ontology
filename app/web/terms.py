@@ -8,6 +8,7 @@ from app.services import review as review_service
 from app.models.user import UserOut, Role
 from app.models.term import TermCreate
 from app.models.review import EditSubmit
+from app.models.relation import RelationType
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -105,4 +106,28 @@ def submit_edit_page(
             "pages/term_form.html",
             {"current_user": user, "term": term, "conflict": True, "values": {"definition": definition, "formula": formula}},
         )
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/relations")
+def add_relation_page(
+    name: str,
+    request: Request,
+    target: str = Form(""),
+    relation_type: RelationType = Form(...),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    if term_service.get_term(target) is None:
+        related = term_service.list_related(name)
+        return templates.TemplateResponse(
+            request,
+            "pages/term_detail.html",
+            {"current_user": user, "term": term, "related": related, "relation_error": f"'{target}' not found"},
+        )
+    term_service.create_relation(name, target, relation_type)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
