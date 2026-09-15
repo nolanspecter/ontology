@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Depends
-from app.web.templates import templates
+from starlette.responses import RedirectResponse, HTMLResponse
+from app.web.templates import templates, is_htmx
 from app.web.deps import require_web_role
 from app.models.user import Role, UserOut
 from app.services import review as review_service
@@ -29,3 +30,11 @@ def review_detail_page(name: str, request: Request, user: UserOut = Depends(requ
     return templates.TemplateResponse(
         request, "pages/review_detail.html", {"current_user": user, "item": item, "current": current}
     )
+
+
+@router.post("/{name}/approve")
+def approve_page(name: str, request: Request, user: UserOut = Depends(require_web_role(Role.REVIEWER, Role.ADMIN))):
+    review_service.approve(name, changed_by=user.email)
+    if is_htmx(request):
+        return HTMLResponse("")
+    return RedirectResponse(url="/app/review", status_code=303)
