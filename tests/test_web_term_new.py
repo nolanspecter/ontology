@@ -154,6 +154,33 @@ def test_new_term_form_declares_relation_when_target_given():
     assert [(r.name, r.relation_type) for r in related] == [("Cash", "COMPUTED_FROM")]
 
 
+def test_new_term_form_declares_multiple_relations():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post("/app/terms/new", data={"name": "Cash", "definition": "Money", "formula": ""})
+    client.post("/app/terms/new", data={"name": "Yield", "definition": "return on investment", "formula": ""})
+    client.post(
+        "/app/terms/new",
+        data={
+            "name": "Receivable Cash",
+            "definition": "Cash owed to us",
+            "formula": "",
+            "target": ["Cash", "Yield"],
+            "relation_type": ["COMPUTED_FROM", "RELATED_TO"],
+            "new_relation_type": ["", ""],
+        },
+    )
+    _logout()
+
+    related = term_service.list_related("Receivable Cash")
+    assert sorted((r.name, r.relation_type) for r in related) == [
+        ("Cash", "COMPUTED_FROM"),
+        ("Yield", "RELATED_TO"),
+    ]
+
+
 def test_new_term_form_without_target_creates_term_with_no_relations():
     from app.services import terms as term_service
 
@@ -304,13 +331,33 @@ def test_new_term_form_accepts_free_extra_property():
         data={
             "name": "Alice Smith", "definition": "A person", "formula": "",
             "kind": "Person", "kindprop_title": "CFO",
-            "extra_name_1": "favorite_color", "extra_value_1": "teal",
+            "extra_name": "favorite_color", "extra_value": "teal",
         },
     )
     _logout()
 
     term = term_service.get_term("Alice Smith")
     assert term.properties == {"title": "CFO", "favorite_color": "teal"}
+
+
+def test_new_term_form_accepts_multiple_extra_properties():
+    from app.services import terms as term_service
+
+    apply_constraints()
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/new",
+        data={
+            "name": "Alice Smith", "definition": "A person", "formula": "",
+            "kind": "Person", "kindprop_title": "CFO",
+            "extra_name": ["favorite_color", "office"],
+            "extra_value": ["teal", "12th floor"],
+        },
+    )
+    _logout()
+
+    term = term_service.get_term("Alice Smith")
+    assert term.properties == {"title": "CFO", "favorite_color": "teal", "office": "12th floor"}
 
 
 def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
@@ -323,7 +370,7 @@ def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
         data={
             "name": "Alice Smith", "definition": "A person", "formula": "",
             "kind": "Person", "kindprop_title": "CFO",
-            "extra_name_1": "title", "extra_value_1": "duplicate",
+            "extra_name": "title", "extra_value": "duplicate",
         },
     )
     _logout()
@@ -343,7 +390,7 @@ def test_new_term_form_rejects_extra_property_colliding_with_reserved_field_name
         data={
             "name": "Bob Jones", "definition": "A person", "formula": "",
             "kind": "Person", "kindprop_title": "CFO",
-            "extra_name_1": "status", "extra_value_1": "published",
+            "extra_name": "status", "extra_value": "published",
         },
     )
     _logout()
@@ -361,7 +408,7 @@ def test_new_term_form_validation_error_strips_raw_pydantic_prefix():
         data={
             "name": "Bob Jones", "definition": "A person", "formula": "",
             "kind": "Person", "kindprop_title": "CFO",
-            "extra_name_1": "status", "extra_value_1": "published",
+            "extra_name": "status", "extra_value": "published",
         },
     )
     _logout()
@@ -379,15 +426,15 @@ def test_new_term_form_validation_error_preserves_kind_and_property_values():
         data={
             "name": "Bob Jones", "definition": "A person", "formula": "",
             "kind": "Person", "kindprop_title": "CFO",
-            "extra_name_1": "status", "extra_value_1": "published",
+            "extra_name": "status", "extra_value": "published",
         },
     )
     _logout()
 
     assert response.status_code == 200
     assert 'name="kindprop_title" value="CFO"' in response.text
-    assert 'name="extra_name_1" value="status"' in response.text
-    assert 'name="extra_value_1" value="published"' in response.text
+    assert 'name="extra_name" value="status"' in response.text
+    assert 'name="extra_value" value="published"' in response.text
 
 
 def test_new_term_form_without_kind_creates_term_with_no_properties():
