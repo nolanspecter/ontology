@@ -80,20 +80,23 @@ async def create_term_page(
     definition: str = Form(""),
     formula: str = Form(""),
     category: str = Form(""),
-    target: str = Form(""),
-    relation_type: str = Form(""),
-    new_relation_type: str = Form(""),
     kind: str = Form(""),
-    extra_name_1: str = Form(""),
-    extra_value_1: str = Form(""),
-    extra_name_2: str = Form(""),
-    extra_value_2: str = Form(""),
-    extra_name_3: str = Form(""),
-    extra_value_3: str = Form(""),
     user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
 ):
     form_data = await request.form()
-    relation_type = new_relation_type.strip() or relation_type
+    extra_pairs = list(zip(form_data.getlist("extra_name"), form_data.getlist("extra_value")))
+    targets = form_data.getlist("target")
+    relation_types_in = form_data.getlist("relation_type")
+    new_relation_types_in = form_data.getlist("new_relation_type")
+    relationships = []
+    for i, raw_target in enumerate(targets):
+        raw_target = raw_target.strip()
+        if not raw_target:
+            continue
+        rt = (new_relation_types_in[i].strip() if i < len(new_relation_types_in) else "") or (
+            relation_types_in[i] if i < len(relation_types_in) else ""
+        )
+        relationships.append((raw_target, rt))
     kind = kind or None
     properties: dict[str, str] = {}
     kind_error = None
@@ -109,11 +112,7 @@ async def create_term_page(
             base_names = {p.name for p in TERM_KINDS[kind]}
 
     if not kind_error:
-        for extra_name, extra_value in (
-            (extra_name_1, extra_value_1),
-            (extra_name_2, extra_value_2),
-            (extra_name_3, extra_value_3),
-        ):
+        for extra_name, extra_value in extra_pairs:
             extra_name = extra_name.strip()
             extra_value = extra_value.strip()
             if not extra_name:
@@ -127,9 +126,7 @@ async def create_term_page(
 
     values = {
         "name": name, "definition": definition, "formula": formula, "category": category, "kind": kind or "",
-        "extra_name_1": extra_name_1, "extra_value_1": extra_value_1,
-        "extra_name_2": extra_name_2, "extra_value_2": extra_value_2,
-        "extra_name_3": extra_name_3, "extra_value_3": extra_value_3,
+        "extras": extra_pairs,
     }
     kind_properties = {
         prop_def.name: str(form_data.get(f"kindprop_{prop_def.name}", ""))
@@ -173,15 +170,17 @@ async def create_term_page(
     term = term_service.create_term(data, created_by=user.email)
     if category:
         term_service.attach_category(term.name, category)
-    if target:
-        relation_error = None
-        if term_service.get_term(target) is None:
-            relation_error = f"'{target}' not found"
-        else:
+    if relationships:
+        relation_errors = []
+        for rel_target, rel_type in relationships:
+            if term_service.get_term(rel_target) is None:
+                relation_errors.append(f"'{rel_target}' not found")
+                continue
             try:
-                term_service.create_relation(term.name, target, relation_type)
+                term_service.create_relation(term.name, rel_target, rel_type)
             except ValueError as e:
-                relation_error = str(e)
+                relation_errors.append(str(e))
+        relation_error = "; ".join(relation_errors)
         if relation_error:
             related = term_service.list_related(term.name)
             return templates.TemplateResponse(

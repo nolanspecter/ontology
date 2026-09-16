@@ -50,18 +50,24 @@
   </script>
 
   <p>Extra properties (optional, any name/value — must not reuse a Kind property name above)</p>
-  <div class="field-row">
-    <label>Property 1 name <input type="text" name="extra_name_1" value="{{ values.extra_name_1 if values else '' }}"></label>
-    <label>Property 1 value <input type="text" name="extra_value_1" value="{{ values.extra_value_1 if values else '' }}"></label>
+  <div id="extra-properties">
+    {% for extra_name, extra_value in (values.extras if values and values.extras else [("", "")]) %}
+    <div class="field-row extra-property-row">
+      <label>Property name <input type="text" name="extra_name" value="{{ extra_name }}"></label>
+      <label>Property value <input type="text" name="extra_value" value="{{ extra_value }}"></label>
+      <button type="button" onclick="if(document.querySelectorAll('.extra-property-row').length > 1) this.closest('.extra-property-row').remove()">Remove</button>
+    </div>
+    {% endfor %}
   </div>
-  <div class="field-row">
-    <label>Property 2 name <input type="text" name="extra_name_2" value="{{ values.extra_name_2 if values else '' }}"></label>
-    <label>Property 2 value <input type="text" name="extra_value_2" value="{{ values.extra_value_2 if values else '' }}"></label>
-  </div>
-  <div class="field-row">
-    <label>Property 3 name <input type="text" name="extra_name_3" value="{{ values.extra_name_3 if values else '' }}"></label>
-    <label>Property 3 value <input type="text" name="extra_value_3" value="{{ values.extra_value_3 if values else '' }}"></label>
-  </div>
+  <button type="button" onclick="addExtraPropertyRow()">+ Add property</button>
+  <script>
+  function addExtraPropertyRow() {
+    var rows = document.getElementById('extra-properties');
+    var row = rows.firstElementChild.cloneNode(true);
+    row.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+    rows.appendChild(row);
+  }
+  </script>
   {% endif %}
 
   {% if not term %}
@@ -70,16 +76,30 @@
     {% for c in categories %}<option value="{{ c }}">{% endfor %}
   </datalist>
 
-  <label>Related to (optional)
-    <select name="target">
-      <option value="">— none —</option>
-      {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
-    </select>
-  </label>
-  <select name="relation_type" id="relation-type-select">
-    {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
-  </select>
-  <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="document.getElementById('relation-type-select').disabled = this.value.length > 0"></label>
+  <div id="relationships">
+    <div class="field-row relationship-row">
+      <label>Related to (optional)
+        <select name="target">
+          <option value="">— none —</option>
+          {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <select name="relation_type" class="relation-type-select">
+        {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
+      </select>
+      <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="this.closest('.relationship-row').querySelector('.relation-type-select').disabled = this.value.length > 0"></label>
+      <button type="button" onclick="if(document.querySelectorAll('.relationship-row').length > 1) this.closest('.relationship-row').remove()">Remove</button>
+    </div>
+  </div>
+  <button type="button" onclick="addRelationshipRow()">+ Add relationship</button>
+  <script>
+  function addRelationshipRow() {
+    var rows = document.getElementById('relationships');
+    var row = rows.firstElementChild.cloneNode(true);
+    row.querySelectorAll('select, input').forEach(function (el) { el.value = ''; el.disabled = false; });
+    rows.appendChild(row);
+  }
+  </script>
   {% endif %}
 
   <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
