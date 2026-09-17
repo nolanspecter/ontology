@@ -8,8 +8,10 @@
   <label>Type <strong>{{ term.name }}</strong> to confirm
     <input type="text" name="confirm_name" id="confirm-name" autocomplete="off" data-expected="{{ term.name }}">
   </label>
-  <button type="submit" id="delete-button" class="btn btn-danger" disabled>Delete permanently</button>
-  <a href="/app/terms/{{ term.name }}">Cancel</a>
+  <div class="actions">
+    <button type="submit" id="delete-button" class="btn btn-danger" disabled>Delete permanently</button>
+    <a href="/app/terms/{{ term.name }}" class="btn btn-ghost">Cancel</a>
+  </div>
 </form>
 <script>
   var input = document.getElementById('confirm-name');

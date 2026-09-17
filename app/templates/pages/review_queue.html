@@ -1,23 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Review Queue</h1>
-<table>
+<div class="board">
 {% for item in queue %}
-<tr>
-  <td><a href="/app/review/{{ item.term_name }}">{{ item.term_name }}</a></td>
-  <td class="badge">{{ item.kind }}</td>
-  <td>
-    <form method="post" action="/app/review/{{ item.term_name }}/approve" style="display:inline" hx-post="/app/review/{{ item.term_name }}/approve" hx-target="closest tr" hx-swap="outerHTML">
+<div class="board-row">
+  <div>
+    <a class="board-name" href="/app/review/{{ item.term_name }}">{{ item.term_name }}</a>
+    <span class="badge">{{ item.kind }}</span>
+  </div>
+  <div class="board-actions">
+    <form method="post" action="/app/review/{{ item.term_name }}/approve" hx-post="/app/review/{{ item.term_name }}/approve" hx-target="closest .board-row" hx-swap="outerHTML swap:250ms">
       <button type="submit">Approve</button>
     </form>
-    <form method="post" action="/app/review/{{ item.term_name }}/reject" style="display:inline" hx-post="/app/review/{{ item.term_name }}/reject" hx-target="closest tr" hx-swap="outerHTML">
+    <form method="post" action="/app/review/{{ item.term_name }}/reject" hx-post="/app/review/{{ item.term_name }}/reject" hx-target="closest .board-row" hx-swap="outerHTML swap:250ms">
       <input type="text" name="reason" placeholder="Reason" required>
-      <button type="submit">Reject</button>
+      <button type="submit" class="btn-danger">Reject</button>
     </form>
-  </td>
-</tr>
+  </div>
+</div>
 {% else %}
-<tr><td colspan="3">No pending items yet.</td></tr>
+<p class="board-empty">No pending items yet.</p>
 {% endfor %}
-</table>
+</div>
 {% endblock %}

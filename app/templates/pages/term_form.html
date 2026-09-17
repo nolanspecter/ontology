@@ -1,6 +1,11 @@
 {% extends "base.html" %}
+{% from "_icons.html" import close_icon %}
 {% block content %}
-<h1>{{ "Edit" if term else "New" }} Term{% if term %}: {{ term.name }}{% endif %}</h1>
+<div class="ticket">
+  <div class="ticket-head">
+    <h1>{{ "Edit" if term else "New" }} Term{% if term %}: {{ term.name }}{% endif %}</h1>
+    <span class="stamp stamp-draft">{{ "editing" if term else "draft" }}</span>
+  </div>
 {% if conflict %}<p class="error">This term changed since you loaded this page — reload to see the latest version.</p>{% endif %}
 {% if pending_edit_exists %}<p class="error">An edit to this term is already awaiting review.</p>{% endif %}
 <form method="post" action="{{ '/app/terms/' + term.name + '/edit' if term else '/app/terms/new' }}">
@@ -17,6 +22,7 @@
   <label>Formula (optional) <input type="text" name="formula" value="{{ values.formula if values else (term.formula if term and term.formula else '') }}"></label>
 
   {% if not term %}
+  <hr class="ticket-stub">
   {% if kind_error %}<p class="error">{{ kind_error }}</p>{% endif %}
   <label>Kind (optional)
     <select name="kind" id="kind-select" onchange="updateKindProperties()">
@@ -55,11 +61,11 @@
     <div class="field-row extra-property-row">
       <label>Property name <input type="text" name="extra_name" value="{{ extra_name }}"></label>
       <label>Property value <input type="text" name="extra_value" value="{{ extra_value }}"></label>
-      <button type="button" onclick="if(document.querySelectorAll('.extra-property-row').length > 1) this.closest('.extra-property-row').remove()">Remove</button>
+      <button type="button" class="btn-ghost btn-icon" aria-label="Remove property" onclick="if(document.querySelectorAll('.extra-property-row').length > 1) this.closest('.extra-property-row').remove()">{{ close_icon() }}</button>
     </div>
     {% endfor %}
   </div>
-  <button type="button" onclick="addExtraPropertyRow()">+ Add property</button>
+  <button type="button" class="btn-ghost" onclick="addExtraPropertyRow()">+ Add property</button>
   <script>
   function addExtraPropertyRow() {
     var rows = document.getElementById('extra-properties');
@@ -71,6 +77,7 @@
   {% endif %}
 
   {% if not term %}
+  <hr class="ticket-stub">
   <label>Category (optional) <input type="text" name="category" list="category-options" value="{{ values.category if values else '' }}"></label>
   <datalist id="category-options">
     {% for c in categories %}<option value="{{ c }}">{% endfor %}
@@ -84,19 +91,22 @@
           {% for t in all_terms %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
         </select>
       </label>
-      <select name="relation_type" class="relation-type-select">
-        {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
-      </select>
+      <label>Relation type
+        <select name="relation_type" class="relation-type-select">
+          {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
+        </select>
+      </label>
       <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="this.closest('.relationship-row').querySelector('.relation-type-select').disabled = this.value.length > 0"></label>
-      <button type="button" onclick="if(document.querySelectorAll('.relationship-row').length > 1) this.closest('.relationship-row').remove()">Remove</button>
+      <button type="button" class="btn-ghost btn-icon" aria-label="Remove relationship" onclick="if(document.querySelectorAll('.relationship-row').length > 1) this.closest('.relationship-row').remove()">{{ close_icon() }}</button>
     </div>
   </div>
-  <button type="button" onclick="addRelationshipRow()">+ Add relationship</button>
+  <button type="button" class="btn-ghost" onclick="addRelationshipRow()">+ Add relationship</button>
   <script>
   function addRelationshipRow() {
     var rows = document.getElementById('relationships');
     var row = rows.firstElementChild.cloneNode(true);
-    row.querySelectorAll('select, input').forEach(function (el) { el.value = ''; el.disabled = false; });
+    row.querySelectorAll('input').forEach(function (el) { el.value = ''; el.disabled = false; });
+    row.querySelectorAll('select').forEach(function (el) { el.selectedIndex = 0; el.disabled = false; });
     rows.appendChild(row);
   }
   </script>
@@ -104,4 +114,5 @@
 
   <button type="submit">{{ "Save edit" if term else "Create draft" }}</button>
 </form>
+</div>
 {% endblock %}

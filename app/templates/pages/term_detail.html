@@ -1,24 +1,89 @@
 {% extends "base.html" %}
+{% from "_icons.html" import close_icon %}
 {% block content %}
-<h1>{{ term.name }} <span class="badge badge-{{ term.status }}">{{ term.status }}</span> <span class="badge">v{{ term.version }}</span></h1>
-<p>{{ term.definition }}</p>
-{% if term.formula %}<p><code>{{ term.formula }}</code></p>{% endif %}
-{% if term.kind %}<p><span class="badge">{{ term.kind }}</span></p>{% endif %}
-{% if term.category %}
-<p>Category: <span class="badge">{{ term.category }}</span>
-  {% if current_user.role in ("editor", "admin") %}
-  <form method="post" action="/app/terms/{{ term.name }}/category/remove" style="display:inline">
-    <button type="submit" class="btn-ghost btn-icon" aria-label="Remove category {{ term.category }}">&times;</button>
-  </form>
-  {% endif %}
-</p>
+<div class="ticket">
+  <div class="ticket-head">
+    <h1>{{ term.name }}</h1>
+    <div>
+      <span class="stamp stamp-{{ term.status }}">{{ term.status }}</span>
+      <span class="badge">v{{ term.version }}</span>
+    </div>
+  </div>
+  <div class="field">
+    <span class="field-label">Definition</span>
+    <p class="field-value">{{ term.definition }}</p>
+  </div>
+
+  <hr class="ticket-stub">
+
+  <div class="field-grid">
+    <div class="field">
+      <span class="field-label">Formula</span>
+      <span class="field-value">{% if term.formula %}<code>{{ term.formula }}</code>{% else %}—{% endif %}</span>
+    </div>
+    <div class="field">
+      <span class="field-label">Kind</span>
+      <span class="field-value">{{ term.kind or "—" }}</span>
+    </div>
+    <div class="field">
+      <span class="field-label">Category</span>
+      <span class="field-value">{{ term.category or "—" }}
+        {% if term.category and current_user.role in ("editor", "admin") %}
+        <form method="post" action="/app/terms/{{ term.name }}/category/remove" style="display:inline">
+          <button type="submit" class="btn-ghost btn-icon" aria-label="Remove category {{ term.category }}">{{ close_icon() }}</button>
+        </form>
+        {% endif %}
+      </span>
+    </div>
+    {% for key, value in term.properties.items() %}
+    <div class="field">
+      <span class="field-label">{{ key }}</span>
+      <span class="field-value">{{ value }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% set kind_props = term_kinds|default({}) %}
+{% if term.kind and current_user.role in ("editor", "admin") %}
+<h2>Edit properties</h2>
+{% if pending_edit and pending_edit.properties %}
+<p class="notice">A properties edit is pending review: {% for k, v in pending_edit.properties.items() %}{{ k }}="{{ v }}"{% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {% endif %}
-{% if term.properties %}
-<ul>
-{% for key, value in term.properties.items() %}
-<li><strong>{{ key }}:</strong> {{ value }}</li>
-{% endfor %}
-</ul>
+<form method="post" action="/app/terms/{{ term.name }}/properties">
+  <input type="hidden" name="expected_version" value="{{ term.version }}">
+  {% for p in kind_props.get(term.kind, []) %}
+  <label>{{ term.kind }} {{ p.name }}{% if p.required %} (required){% else %} (optional){% endif %}
+    <input type="text" name="kindprop_{{ p.name }}" value="{{ term.properties.get(p.name, '') }}">
+  </label>
+  {% endfor %}
+  {% if prop_error %}<p class="error">{{ prop_error }}</p>{% endif %}
+  <p>Extra properties (optional, any name/value — must not reuse a Kind property name above)</p>
+  {% set base_names = kind_props.get(term.kind, [])|map(attribute="name")|list %}
+  {% set extras = [] %}
+  {% for key, value in term.properties.items() %}
+    {% if key not in base_names %}{% set _ = extras.append((key, value)) %}{% endif %}
+  {% endfor %}
+  <div id="extra-properties">
+    {% for extra_name, extra_value in (extras if extras else [("", "")]) %}
+    <div class="field-row extra-property-row">
+      <label>Property name <input type="text" name="extra_name" value="{{ extra_name }}"></label>
+      <label>Property value <input type="text" name="extra_value" value="{{ extra_value }}"></label>
+      <button type="button" class="btn-ghost btn-icon" aria-label="Remove property" onclick="if(document.querySelectorAll('.extra-property-row').length > 1) this.closest('.extra-property-row').remove()">{{ close_icon() }}</button>
+    </div>
+    {% endfor %}
+  </div>
+  <button type="button" class="btn-ghost" onclick="addExtraPropertyRow()">+ Add property</button>
+  <script>
+  function addExtraPropertyRow() {
+    var rows = document.getElementById('extra-properties');
+    var row = rows.firstElementChild.cloneNode(true);
+    row.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+    rows.appendChild(row);
+  }
+  </script>
+  <button type="submit">Save properties</button>
+</form>
 {% endif %}
 
 {% if pending_edit %}
@@ -26,14 +91,16 @@
 {% endif %}
 
 <h2>Related</h2>
-<ul>
+<ul class="legs">
 {% for r in related %}
-<li>{{ r.relation_type }} &rarr; <a href="/app/terms/{{ r.name }}">{{ r.name }}</a>
+<li>
+  <span class="relation-type">{{ r.relation_type }}</span>
+  <a href="/app/terms/{{ r.name }}">{{ r.name }}</a>
   {% if current_user.role in ("editor", "admin") %}
   <form method="post" action="/app/terms/{{ term.name }}/relations/remove" style="display:inline">
     <input type="hidden" name="target" value="{{ r.name }}">
     <input type="hidden" name="relation_type" value="{{ r.relation_type }}">
-    <button type="submit" class="btn-ghost btn-icon" aria-label="Remove relation to {{ r.name }}">&times;</button>
+    <button type="submit" class="btn-ghost btn-icon" aria-label="Remove relation to {{ r.name }}">{{ close_icon() }}</button>
   </form>
   {% endif %}
 </li>
@@ -42,7 +109,7 @@
 
 {% if current_user.role in ("editor", "admin") %}
 <div class="actions">
-  <a href="/app/terms/{{ term.name }}/edit">Edit</a>
+  <a href="/app/terms/{{ term.name }}/edit" class="btn btn-ghost">Edit</a>
   {% if term.status == "draft" %}
   <form method="post" action="/app/terms/{{ term.name }}/submit">
     <button type="submit">Submit for Review</button>
@@ -54,21 +121,29 @@
 </div>
 
 <h2>Add relation</h2>
-<form method="post" action="/app/terms/{{ term.name }}/relations">
-  <select name="target">
-    {% for t in other_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-  </select>
-  <select name="relation_type" id="relation-type-select">
-    {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
-  </select>
-  <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="document.getElementById('relation-type-select').disabled = this.value.length > 0"></label>
-  <button type="submit">Add relation</button>
-</form>
+<div class="field-row">
+  <form method="post" action="/app/terms/{{ term.name }}/relations" class="field-row" style="flex:1; margin-bottom:0;">
+    <label>Target
+      <select name="target">
+        {% for t in other_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Relation type
+      <select name="relation_type" id="relation-type-select">
+        {% for rt in relation_types %}<option value="{{ rt }}">{{ rt }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>or declare a new type <input type="text" name="new_relation_type" placeholder="e.g. MENTIONED_IN" oninput="document.getElementById('relation-type-select').disabled = this.value.length > 0"></label>
+    <button type="submit">Add relation</button>
+  </form>
+</div>
 {% if relation_error %}<p class="error">{{ relation_error }}</p>{% endif %}
 
 <h2>{{ "Change category" if term.category else "Set category" }}</h2>
-<form method="post" action="/app/terms/{{ term.name }}/category">
-  <input type="text" name="category" list="category-options" value="{{ term.category or '' }}">
+<form method="post" action="/app/terms/{{ term.name }}/category" class="field-row">
+  <label>Category
+    <input type="text" name="category" list="category-options" value="{{ term.category or '' }}">
+  </label>
   <datalist id="category-options">
     {% for c in categories|default([]) %}<option value="{{ c }}">{% endfor %}
   </datalist>

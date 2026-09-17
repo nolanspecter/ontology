@@ -6,7 +6,7 @@ from app.web.deps import require_web_role
 from app.services import terms as term_service
 from app.services import review as review_service
 from app.models.user import UserOut, Role
-from app.models.term import TermCreate, TermOut
+from app.models.term import TermCreate, TermOut, RESERVED_PROPERTY_FIELDS
 from app.models.review import EditSubmit
 from app.models.term_kind import TERM_KINDS
 
@@ -26,6 +26,36 @@ def _validation_errors_to_dict(e: ValidationError, whole_model_field: str = "") 
             msg = msg[len("Value error, "):]
         errors[field] = msg
     return errors
+
+
+def _parse_kind_properties(form_data, kind: str) -> tuple[dict[str, str], str | None]:
+    """Build a properties dict from kindprop_*/extra_name/extra_value form fields
+    for a known kind. Returns (properties, error) — error is set on unknown kind,
+    missing required property, or an extra property name colliding with the kind's."""
+    if kind not in TERM_KINDS:
+        return {}, f"unknown kind '{kind}'"
+    properties: dict[str, str] = {}
+    for prop_def in TERM_KINDS[kind]:
+        value = str(form_data.get(f"kindprop_{prop_def.name}", "")).strip()
+        if value:
+            properties[prop_def.name] = value
+    base_names = {p.name for p in TERM_KINDS[kind]}
+    missing = [p.name for p in TERM_KINDS[kind] if p.required and not properties.get(p.name)]
+    if missing:
+        noun = "property" if len(missing) == 1 else "properties"
+        return properties, f"missing required {noun}: {', '.join(missing)}"
+    extra_pairs = list(zip(form_data.getlist("extra_name"), form_data.getlist("extra_value")))
+    for extra_name, extra_value in extra_pairs:
+        extra_name = extra_name.strip()
+        extra_value = extra_value.strip()
+        if not extra_name or not extra_value:
+            continue
+        if extra_name in base_names:
+            return properties, f"'{extra_name}' is already a {kind} property — pick a different name for an extra property"
+        if extra_name in RESERVED_PROPERTY_FIELDS:
+            return properties, f"'{extra_name}' is a reserved field name and can't be used as a property"
+        properties[extra_name] = extra_value
+    return properties, None
 
 
 def _visible_to(term: TermOut, user: UserOut) -> bool:
@@ -227,6 +257,7 @@ def term_detail(name: str, request: Request, user: UserOut = Depends(require_web
             "pending_edit": pending_edit,
             "changes": changes,
             "categories": term_service.list_categories(),
+            "term_kinds": TERM_KINDS,
         },
     )
 
@@ -434,4 +465,57 @@ def remove_category_page(
             request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
         )
     term_service.set_category(name, None)
+    return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+
+
+@router.post("/{name}/properties")
+async def set_properties_page(
+    name: str,
+    request: Request,
+    expected_version: int = Form(...),
+    user: UserOut = Depends(require_web_role(Role.EDITOR, Role.ADMIN)),
+):
+    term = term_service.get_term(name)
+    if term is None:
+        return templates.TemplateResponse(
+            request, "pages/not_found.html", {"current_user": user, "name": name}, status_code=404
+        )
+    if term.kind is None:
+        return RedirectResponse(url=f"/app/terms/{name}", status_code=303)
+    form_data = await request.form()
+    properties, prop_error = _parse_kind_properties(form_data, term.kind)
+
+    def _render_error(error: str):
+        related = term_service.list_related(name)
+        return templates.TemplateResponse(
+            request,
+            "pages/term_detail.html",
+            {
+                "current_user": user,
+                "term": term,
+                "related": related,
+                "prop_error": error,
+                "other_terms": _other_term_names(name),
+                "relation_types": term_service.list_relation_types(),
+                "term_kinds": TERM_KINDS,
+                "categories": term_service.list_categories(),
+            },
+        )
+
+    if prop_error:
+        return _render_error(prop_error)
+    try:
+        review_service.submit_edit(
+            name,
+            EditSubmit(
+                definition=term.definition, formula=term.formula,
+                expected_version=expected_version, properties=properties,
+            ),
+        )
+    except review_service.VersionConflict:
+        return _render_error("This term changed since you loaded this page — reload to see the latest version.")
+    except ValueError as e:
+        return _render_error(str(e))
+    if user.role == Role.ADMIN:
+        review_service.approve(name, changed_by=user.email)
     return RedirectResponse(url=f"/app/terms/{name}", status_code=303)

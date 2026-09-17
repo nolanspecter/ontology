@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.schema import apply_constraints
 from app.services import terms as term_service
+from app.services import review as review_service
 from app.web.deps import get_web_user
 from app.models.user import Role, UserOut
 
@@ -144,7 +145,8 @@ def test_term_detail_shows_kind_badge_and_properties():
 
     response = client.get("/app/terms/Alice Smith")
     assert response.status_code == 200
-    assert '<span class="badge">Person</span>' in response.text
+    assert '<span class="field-label">Kind</span>' in response.text
+    assert "Person" in response.text
     assert "title" in response.text
     assert "CFO" in response.text
     assert "favorite_color" in response.text
@@ -161,4 +163,104 @@ def test_term_detail_no_kind_badge_for_kindless_term():
     assert response.status_code == 200
     assert '<span class="badge">Person</span>' not in response.text
     assert '<span class="badge">Business</span>' not in response.text
+    _logout()
+
+
+def test_edit_properties_by_editor_is_gated_by_review_not_applied_immediately():
+    apply_constraints()
+    client.post(
+        "/terms",
+        json={
+            "name": "Alice Smith", "definition": "A person", "formula": None,
+            "kind": "Person", "properties": {"title": "CFO", "favorite_color": "teal"},
+        },
+    )
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Alice Smith/properties",
+        data={
+            "kindprop_title": "CEO", "kindprop_department": "",
+            "extra_name": ["favorite_color"], "extra_value": ["blue"],
+            "expected_version": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    detail = client.get("/app/terms/Alice Smith")
+    assert '<span class="field-value">CFO</span>' in detail.text
+    assert "properties edit is pending review" in detail.text
+    assert 'title="CEO"' in detail.text
+    assert 'favorite_color="blue"' in detail.text
+    _logout()
+
+
+def test_edit_properties_appear_in_review_queue():
+    apply_constraints()
+    client.post(
+        "/terms",
+        json={"name": "Alice Smith", "definition": "A person", "formula": None, "kind": "Person", "properties": {}},
+    )
+    _login_as(Role.EDITOR)
+    client.post(
+        "/app/terms/Alice Smith/properties",
+        data={"kindprop_title": "CEO", "expected_version": "1"},
+        follow_redirects=False,
+    )
+    _logout()
+
+    _login_as(Role.REVIEWER)
+    queue = review_service.get_review_queue()
+    item = next(i for i in queue if i.term_name == "Alice Smith")
+    assert item.properties == {"title": "CEO"}
+    _logout()
+
+
+def test_admin_property_edit_auto_approves():
+    apply_constraints()
+    client.post(
+        "/terms",
+        json={"name": "Alice Smith", "definition": "A person", "formula": None, "kind": "Person", "properties": {}},
+    )
+    _login_as(Role.ADMIN)
+
+    response = client.post(
+        "/app/terms/Alice Smith/properties",
+        data={"kindprop_title": "CEO", "expected_version": "1"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    detail = client.get("/app/terms/Alice Smith")
+    assert "CEO" in detail.text
+    _logout()
+
+
+def test_edit_properties_rejects_extra_name_colliding_with_kind_property():
+    apply_constraints()
+    client.post(
+        "/terms",
+        json={"name": "Alice Smith", "definition": "A person", "formula": None, "kind": "Person", "properties": {}},
+    )
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Alice Smith/properties",
+        data={"kindprop_title": "CEO", "extra_name": ["title"], "extra_value": ["dup"], "expected_version": "1"},
+    )
+    assert response.status_code == 200
+    assert "already a Person property" in response.text
+    _logout()
+
+
+def test_edit_properties_is_noop_for_kindless_term():
+    apply_constraints()
+    client.post("/terms", json={"name": "Cash", "definition": "Money on hand", "formula": None})
+    _login_as(Role.EDITOR)
+
+    response = client.post(
+        "/app/terms/Cash/properties", data={"expected_version": "1"}, follow_redirects=False
+    )
+    assert response.status_code == 303
     _logout()

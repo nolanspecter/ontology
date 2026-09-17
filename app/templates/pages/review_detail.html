@@ -13,11 +13,17 @@
 <p>Formula: {{ item.formula or "—" }}</p>
 {% endif %}
 
-<form method="post" action="/app/review/{{ item.term_name }}/approve">
-  <button type="submit">Approve</button>
-</form>
-<form method="post" action="/app/review/{{ item.term_name }}/reject">
-  <input type="text" name="reason" placeholder="Reason" required>
-  <button type="submit">Reject</button>
-</form>
+{% if item.properties %}
+<p>Properties: {% for k, v in item.properties.items() %}{{ k }}="{{ v }}"{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+
+<div class="actions">
+  <form method="post" action="/app/review/{{ item.term_name }}/approve">
+    <button type="submit">Approve</button>
+  </form>
+  <form method="post" action="/app/review/{{ item.term_name }}/reject">
+    <input type="text" name="reason" placeholder="Reason" required>
+    <button type="submit" class="btn-danger">Reject</button>
+  </form>
+</div>
 {% endblock %}

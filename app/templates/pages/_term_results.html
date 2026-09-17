@@ -1,7 +1,8 @@
+{% from "_icons.html" import close_icon %}
 {% for t in results %}
-<li><a href="/app/terms/{{ t.name }}">{{ t.name }}</a> — {{ t.definition }} <span class="badge badge-{{ t.status }}">{{ t.status }}</span>
+<li><a href="/app/terms/{{ t.name }}">{{ t.name }}</a> — {{ t.definition }} <span class="stamp stamp-{{ t.status }}">{{ t.status }}</span>
   {% if current_user.role == "admin" %}
-  <a href="/app/terms/{{ t.name }}/delete" class="btn btn-ghost btn-icon" aria-label="Delete {{ t.name }}">&times;</a>
+  <a href="/app/terms/{{ t.name }}/delete" class="btn btn-ghost btn-icon" aria-label="Delete {{ t.name }}">{{ close_icon() }}</a>
   {% endif %}
 </li>
 {% else %}
