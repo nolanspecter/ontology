@@ -1,11 +1,11 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.web.deps import get_web_user
-from app.models.user import Role, UserOut
-from app.services import review as review_service
-from app.services import terms as term_service
-from app.db import run_query
+from app.backend.schema import apply_constraints
+from app.ui.deps import get_web_user
+from app.backend.models.user import Role, UserOut
+from app.backend.services import review as review_service
+from app.backend.services import terms as term_service
+from app.backend.db import run_query
 
 client = TestClient(app)
 
@@ -83,7 +83,7 @@ def test_delete_correct_confirmation_deletes_term():
     _logout()
 
 
-def test_delete_cascades_relations_and_history():
+def test_delete_cascades_relations_and_keeps_history():
     apply_constraints()
     _publish("Cash")
     _publish("Receivable Cash")
@@ -94,7 +94,7 @@ def test_delete_cascades_relations_and_history():
     _login_as(Role.ADMIN)
 
     cash_change_count = len(review_service.list_changes("Cash"))
-    total_before = run_query("MATCH (c:Change) RETURN count(c) AS n")[0]["n"]
+    total_before = run_query("SELECT count(*) AS n FROM review_events")[0]["n"]
     assert cash_change_count > 0  # sanity: _publish's approve_new left an audit record
 
     client.post("/app/terms/Cash/delete", data={"confirm_name": "Cash"})
@@ -102,10 +102,13 @@ def test_delete_cascades_relations_and_history():
     assert client.get("/terms/Cash").status_code == 404
     assert review_service.list_changes("Cash") == []
     assert term_service.list_related("Receivable Cash") == []
-    # not just unreachable via a MATCH through the (now-gone) term — actually gone from the graph.
-    # Receivable Cash's own (unrelated) Change history must survive untouched.
-    total_after = run_query("MATCH (c:Change) RETURN count(c) AS n")[0]["n"]
-    assert total_after == total_before - cash_change_count
+    # The audit trail outlives the term: Cash's events stay, detached from any
+    # entity but still naming what they were about, and nothing else is touched.
+    total_after = run_query("SELECT count(*) AS n FROM review_events")[0]["n"]
+    assert total_after == total_before
+    orphaned = run_query("SELECT entity_id FROM review_events WHERE entity_name = 'Cash'")
+    assert len(orphaned) == cash_change_count
+    assert all(r["entity_id"] is None for r in orphaned)
     _logout()
 
 
@@ -119,7 +122,7 @@ def test_delete_removes_orphaned_pending_draft_node():
 
     client.post("/app/terms/Cash/delete", data={"confirm_name": "Cash"})
 
-    assert run_query("MATCH (d:Draft) RETURN count(d) AS n")[0]["n"] == 0
+    assert run_query("SELECT count(*) AS n FROM drafts")[0]["n"] == 0
     _logout()
 
 

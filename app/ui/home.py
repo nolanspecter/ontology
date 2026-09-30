@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends
-from app.web.templates import templates
-from app.web.deps import get_web_user
-from app.models.user import UserOut
+from app.ui.templates import templates
+from app.ui.deps import get_web_user
+from app.backend.models.user import UserOut
 
 router = APIRouter(tags=["web-home"])
 

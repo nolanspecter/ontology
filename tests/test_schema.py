@@ -1,19 +1,20 @@
-from app.schema import apply_constraints
-from app.db import run_query
+import pytest
+import psycopg
+from app.backend.schema import apply_constraints
+from app.backend.db import run_query
+from app.backend.models.term import TermCreate
+from app.backend.services import terms as term_service
 
 
 def test_term_name_uniqueness_enforced():
     apply_constraints()
-    run_query("CREATE (:Term {name: 'Cash', status: 'draft', version: 1})")
-    try:
-        run_query("CREATE (:Term {name: 'Cash', status: 'draft', version: 1})")
-        assert False, "expected constraint violation"
-    except Exception as e:
-        assert "already exists" in str(e) or "ConstraintValidationFailed" in str(e)
+    term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="admin@corp.com")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        term_service.create_term(TermCreate(name="cash ", definition="Money"), created_by="admin@corp.com")
 
 
-def test_term_search_fulltext_index_created():
+def test_apply_constraints_is_a_no_op_on_a_loaded_database():
     apply_constraints()
-    rows = run_query("SHOW INDEXES YIELD name, type WHERE name = 'term_search_index'")
-    assert len(rows) == 1
-    assert rows[0]["type"] == "FULLTEXT"
+    term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="admin@corp.com")
+    apply_constraints()
+    assert run_query("SELECT count(*) AS n FROM entities")[0]["n"] == 1

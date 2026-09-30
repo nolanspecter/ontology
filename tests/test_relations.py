@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
+from app.backend.schema import apply_constraints
 
 client = TestClient(app)
 

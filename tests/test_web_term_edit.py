@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.web.deps import get_web_user
-from app.models.user import Role, UserOut
-from app.models.review import EditSubmit
-from app.services import terms as term_service
+from app.backend.schema import apply_constraints
+from app.ui.deps import get_web_user
+from app.backend.models.user import Role, UserOut
+from app.backend.models.review import EditSubmit
+from app.backend.services import terms as term_service
 
 client = TestClient(app)
 
@@ -74,7 +74,7 @@ def test_edit_form_submits_and_redirects():
 
 
 def test_edit_form_creates_pending_review_draft():
-    from app.services.review import get_review_queue
+    from app.backend.services.review import get_review_queue
 
     apply_constraints()
     _publish("Ebitda")
@@ -95,7 +95,7 @@ def test_edit_form_creates_pending_review_draft():
 
 
 def test_admin_edit_skips_review_and_applies_immediately():
-    from app.services.review import get_review_queue
+    from app.backend.services.review import get_review_queue
 
     apply_constraints()
     _publish("Cash")
@@ -117,7 +117,7 @@ def test_admin_edit_skips_review_and_applies_immediately():
 
 
 def test_admin_edit_records_audit_change():
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
 
     apply_constraints()
     _publish("Cash")
@@ -176,7 +176,7 @@ def test_edit_submit_404s_for_unknown_term():
 
 
 def test_edit_form_blank_definition_rejected_without_queuing():
-    from app.services.review import get_review_queue
+    from app.backend.services.review import get_review_queue
 
     apply_constraints()
     _publish("Liability")
@@ -220,7 +220,7 @@ def test_edit_form_blind_resubmit_after_conflict_conflicts_again():
     _login_as(Role.EDITOR)
 
     # simulate another user's approved change bumping the version to 2
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
     review_service.submit_edit(
         "Equity", EditSubmit(definition="someone else's edit", formula=None, expected_version=1)
     )

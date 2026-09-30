@@ -3,13 +3,13 @@ from fastapi import FastAPI, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
-from app.config import settings
-from app.routers import terms, relations, review, categories, auth as auth_router
-from app.web.deps import WebAuthRequired, WebForbidden, get_web_user
-from app.web.templates import templates, is_htmx
-from app.web import review as web_review
-from app.web import home as web_home
-from app.web import terms as web_terms
+from app.backend.config import settings
+from app.backend.routers import terms, relations, review, categories, auth as auth_router
+from app.ui.deps import WebAuthRequired, WebForbidden, get_web_user
+from app.ui.templates import templates, is_htmx
+from app.ui import review as web_review
+from app.ui import home as web_home
+from app.ui import terms as web_terms
 
 if settings.env != "dev" and settings.session_secret_key == "dev-secret-change-in-production":
     raise RuntimeError("SESSION_SECRET_KEY must be set to a real secret outside dev")
@@ -37,7 +37,7 @@ app.include_router(web_home.router)
 app.include_router(web_terms.router)
 
 
-app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
+app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "ui" / "static"), name="static")
 
 
 @app.get("/health")
@@ -59,5 +59,5 @@ def handle_web_forbidden(request, exc):
     )
 
 
-from app.public_api import public_app
+from app.backend.public_api import public_app
 app.mount("/public", public_app)

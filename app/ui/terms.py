@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, Request, Form
 from starlette.responses import RedirectResponse
 from pydantic import ValidationError
-from app.web.templates import templates, is_htmx
-from app.web.deps import require_web_role
-from app.services import terms as term_service
-from app.services import review as review_service
-from app.models.user import UserOut, Role
-from app.models.term import TermCreate, TermOut, RESERVED_PROPERTY_FIELDS
-from app.models.review import EditSubmit
-from app.models.term_kind import TERM_KINDS
+from app.ui.templates import templates, is_htmx
+from app.ui.deps import require_web_role
+from app.backend.services import terms as term_service
+from app.backend.services import review as review_service
+from app.backend.models.user import UserOut, Role
+from app.backend.models.term import TermCreate, TermOut, RESERVED_PROPERTY_FIELDS
+from app.backend.models.review import EditSubmit
+from app.backend.models.term_kind import TERM_KINDS
 
 router = APIRouter(prefix="/app/terms", tags=["web-terms"], dependencies=[Depends(require_web_role())])
 
@@ -62,8 +62,6 @@ def _visible_to(term: TermOut, user: UserOut) -> bool:
     if term.status != "draft":
         return True
     if user.role == Role.ADMIN:
-        return True
-    if term.created_by is None:
         return True
     return term.created_by == user.email
 
@@ -301,7 +299,7 @@ def submit_edit_page(
             },
         )
     try:
-        review_service.submit_edit(name, data)
+        review_service.submit_edit(name, data, author=user.email)
     except review_service.VersionConflict:
         return templates.TemplateResponse(
             request,
@@ -511,6 +509,7 @@ async def set_properties_page(
                 definition=term.definition, formula=term.formula,
                 expected_version=expected_version, properties=properties,
             ),
+            author=user.email,
         )
     except review_service.VersionConflict:
         return _render_error("This term changed since you loaded this page — reload to see the latest version.")

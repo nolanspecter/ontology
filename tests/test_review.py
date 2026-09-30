@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.services import review as review_service
+from app.backend.schema import apply_constraints
+from app.backend.services import review as review_service
 
 client = TestClient(app)
 
@@ -71,7 +71,7 @@ def test_review_queue_lists_new_terms_and_edits():
 
 
 def test_get_queue_item_returns_pending_edit_for_published_term():
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
 
     apply_constraints()
     _make_term("Cash")
@@ -88,7 +88,7 @@ def test_get_queue_item_returns_pending_edit_for_published_term():
 
 
 def test_get_queue_item_returns_none_when_nothing_pending():
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
 
     apply_constraints()
     _make_term("Cash")
@@ -98,7 +98,7 @@ def test_get_queue_item_returns_none_when_nothing_pending():
 
 
 def test_list_changes_includes_timestamp():
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
 
     apply_constraints()
     _make_term("Cash")
@@ -157,8 +157,8 @@ def test_reject_new_term_reverts_to_draft():
 
 
 from app.main import app
-from app.dependencies import get_current_user
-from app.models.user import Role, UserOut
+from app.backend.dependencies import get_current_user
+from app.backend.models.user import Role, UserOut
 
 
 def _as(role: Role):

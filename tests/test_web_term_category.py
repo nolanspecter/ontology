@@ -1,15 +1,15 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.web.deps import get_web_user
-from app.models.user import Role, UserOut
-from app.services.terms import get_term
+from app.backend.schema import apply_constraints
+from app.ui.deps import get_web_user
+from app.backend.models.user import Role, UserOut
+from app.backend.services.terms import get_term
 
 client = TestClient(app)
 
 
 def _login_as(role):
-    app.dependency_overrides[get_web_user] = lambda: UserOut(email="u@corp.com", role=role)
+    app.dependency_overrides[get_web_user] = lambda: UserOut(email="admin@corp.com", role=role)
 
 
 def _logout():
@@ -88,7 +88,7 @@ def test_remove_category_form_404s_for_unknown_term():
 def test_term_detail_page_shows_category():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
-    from app.services.terms import attach_category
+    from app.backend.services.terms import attach_category
     attach_category("Cash", "Liquidity")
     _login_as(Role.EDITOR)
 
@@ -100,7 +100,7 @@ def test_term_detail_page_shows_category():
 def test_term_detail_page_shows_remove_category_control_for_editor():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
-    from app.services.terms import attach_category
+    from app.backend.services.terms import attach_category
     attach_category("Cash", "Liquidity")
     _login_as(Role.EDITOR)
 
@@ -112,7 +112,7 @@ def test_term_detail_page_shows_remove_category_control_for_editor():
 def test_term_detail_page_hides_category_controls_for_non_editor():
     apply_constraints()
     client.post("/terms", json={"name": "Cash", "definition": "d", "formula": None})
-    from app.services.terms import attach_category
+    from app.backend.services.terms import attach_category
     attach_category("Cash", "Liquidity")
     _login_as(Role.REVIEWER)
 

@@ -1,9 +1,9 @@
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Request, Form
 from starlette.responses import RedirectResponse
-from app.config import settings
-from app.services.auth import sync_user, get_user
-from app.web.templates import templates
+from app.backend.config import settings
+from app.backend.services.auth import sync_user, get_user
+from app.ui.templates import templates
 
 oauth = OAuth()
 oauth.register(

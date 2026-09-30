@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Request, Depends, Form
 from starlette.responses import RedirectResponse, HTMLResponse
-from app.web.templates import templates, is_htmx
-from app.web.deps import require_web_role
-from app.models.user import Role, UserOut
-from app.services import review as review_service
-from app.services import terms as term_service
+from app.ui.templates import templates, is_htmx
+from app.ui.deps import require_web_role
+from app.backend.models.user import Role, UserOut
+from app.backend.services import review as review_service
+from app.backend.services import terms as term_service
 
 # Router-level `require_web_role()` (no args) makes auth structural: every route added to
 # this router is guaranteed to require at least a logged-in user, even if its author forgets

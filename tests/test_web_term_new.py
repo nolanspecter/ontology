@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.web.deps import get_web_user
-from app.models.user import Role, UserOut
+from app.backend.schema import apply_constraints
+from app.ui.deps import get_web_user
+from app.backend.models.user import Role, UserOut
 
 client = TestClient(app)
 
@@ -72,7 +72,7 @@ def test_new_term_form_rejects_slash_in_name():
 
 
 def test_submit_for_review_moves_draft_to_pending_review():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -96,7 +96,7 @@ def test_submit_for_review_404s_for_unknown_term():
 
 
 def test_new_term_form_records_creator():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -107,7 +107,7 @@ def test_new_term_form_records_creator():
 
 
 def test_new_term_form_attaches_category_when_given():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -133,7 +133,7 @@ def test_new_term_form_without_category_creates_term_fine():
 
 
 def test_new_term_form_declares_relation_when_target_given():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -155,7 +155,7 @@ def test_new_term_form_declares_relation_when_target_given():
 
 
 def test_new_term_form_declares_multiple_relations():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -182,7 +182,7 @@ def test_new_term_form_declares_multiple_relations():
 
 
 def test_new_term_form_without_target_creates_term_with_no_relations():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -193,7 +193,7 @@ def test_new_term_form_without_target_creates_term_with_no_relations():
 
 
 def test_admin_creating_term_skips_review():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.ADMIN)
@@ -204,7 +204,7 @@ def test_admin_creating_term_skips_review():
 
 
 def test_admin_bypass_records_audit_change():
-    from app.services import review as review_service
+    from app.backend.services import review as review_service
 
     apply_constraints()
     _login_as(Role.ADMIN)
@@ -217,7 +217,7 @@ def test_admin_bypass_records_audit_change():
 
 
 def test_admin_bypass_does_not_apply_when_relation_target_invalid():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.ADMIN)
@@ -238,7 +238,7 @@ def test_admin_bypass_does_not_apply_when_relation_target_invalid():
 
 
 def test_editor_creating_term_still_requires_review():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -249,7 +249,7 @@ def test_editor_creating_term_still_requires_review():
 
 
 def test_new_term_form_unknown_relation_target_shows_error_but_keeps_term():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -285,7 +285,7 @@ def test_new_term_form_shows_kind_dropdown():
 
 
 def test_new_term_form_creates_term_with_kind_and_property():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -304,7 +304,7 @@ def test_new_term_form_creates_term_with_kind_and_property():
 
 
 def test_new_term_form_kind_with_no_properties_filled_succeeds():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -322,7 +322,7 @@ def test_new_term_form_kind_with_no_properties_filled_succeeds():
 
 
 def test_new_term_form_accepts_free_extra_property():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -341,7 +341,7 @@ def test_new_term_form_accepts_free_extra_property():
 
 
 def test_new_term_form_accepts_multiple_extra_properties():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -361,7 +361,7 @@ def test_new_term_form_accepts_multiple_extra_properties():
 
 
 def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -381,7 +381,7 @@ def test_new_term_form_rejects_extra_property_colliding_with_kind_base_name():
 
 
 def test_new_term_form_rejects_extra_property_colliding_with_reserved_field_name():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)
@@ -438,7 +438,7 @@ def test_new_term_form_validation_error_preserves_kind_and_property_values():
 
 
 def test_new_term_form_without_kind_creates_term_with_no_properties():
-    from app.services import terms as term_service
+    from app.backend.services import terms as term_service
 
     apply_constraints()
     _login_as(Role.EDITOR)

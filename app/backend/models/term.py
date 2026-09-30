@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Literal
-from app.models.term_kind import TERM_KINDS
+from app.backend.models.term_kind import TERM_KINDS
 
 # System/base fields every term node carries. Kind properties may never collide
 # with these — a colliding key would otherwise let a caller forge status/createdBy
@@ -79,4 +79,4 @@ class TermSearchResult(BaseModel):
     """One fulltext-search match: a candidate term name and its relevance
     score, not the term's content — follow up with get_term for that."""
     name: str = Field(description="The matched term's exact name — pass this to get_term for its full definition.")
-    score: float = Field(description="Relevance score from the fulltext search; higher is a better match. Not normalized or comparable across different searches.")
+    score: float = Field(description="BM25 relevance score (or fuzzy-match similarity when no whole word matched); higher is a better match. Not normalized or comparable across different searches.")

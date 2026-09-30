@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
-from app.config import settings
-from app.public_api import public_app
+from app.backend.config import settings
+from app.backend.public_api import public_app
 
 mcp = FastMCP.from_fastapi(app=public_app, name="Ontology")
 

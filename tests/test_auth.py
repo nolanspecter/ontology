@@ -1,10 +1,18 @@
 from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
-from app.services.auth import sync_user, get_user
-from app.models.user import Role
-from app.config import settings
-import app.routers.auth as auth_router
+from app.backend.services.auth import sync_user, get_user
+from app.backend.models.user import Role
+from app.backend.config import settings
+import app.backend.routers.auth as auth_router
+import pytest
+from app.backend.db import run_query
+
+
+@pytest.fixture(autouse=True)
+def no_users():
+    # these tests are about first login, so start with nobody known
+    run_query("DELETE FROM users")
 
 
 def test_sync_user_assigns_role_from_group(monkeypatch):

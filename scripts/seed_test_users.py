@@ -1,5 +1,5 @@
-from app.db import run_query
-from app.models.user import Role
+from app.backend.db import run_query
+from app.backend.models.user import Role
 
 TEST_USERS = [
     ("editor@corp.com", Role.EDITOR),
@@ -13,7 +13,8 @@ def seed() -> None:
         # SET (not ON CREATE SET) so re-running this script always pins the
         # role back to what's intended, unlike sync_user's real first-login-only rule.
         run_query(
-            "MERGE (u:User {email: $email}) SET u.role = $role",
+            "INSERT INTO users (email, role) VALUES (%(email)s, %(role)s) "
+            "ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role",
             email=email, role=role.value,
         )
         print(f"{email} -> {role.value}")

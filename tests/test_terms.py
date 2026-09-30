@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.services import terms as term_service
+from app.backend.schema import apply_constraints
+from app.backend.services import terms as term_service
 
 client = TestClient(app)
 
@@ -70,7 +70,7 @@ def test_list_relation_types_includes_builtins_and_custom():
 
 def test_create_term_stores_created_by():
     apply_constraints()
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     created = term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="editor@corp.com")
     assert created.created_by == "editor@corp.com"
@@ -79,16 +79,8 @@ def test_create_term_stores_created_by():
     assert fetched.created_by == "editor@corp.com"
 
 
-def test_create_term_without_created_by_defaults_to_none():
-    apply_constraints()
-    from app.models.term import TermCreate
-
-    created = term_service.create_term(TermCreate(name="Cash", definition="Money"))
-    assert created.created_by is None
-
-
 def test_term_create_with_valid_kind_and_property():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     term = TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"})
     assert term.kind == "Person"
@@ -97,7 +89,7 @@ def test_term_create_with_valid_kind_and_property():
 
 def test_term_create_rejects_unknown_kind():
     from pydantic import ValidationError
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     try:
         TermCreate(name="X", definition="d", kind="Alien", properties={})
@@ -107,7 +99,7 @@ def test_term_create_rejects_unknown_kind():
 
 
 def test_term_create_with_kind_and_no_properties_is_valid():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     term = TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={})
     assert term.kind == "Person"
@@ -116,7 +108,7 @@ def test_term_create_with_kind_and_no_properties_is_valid():
 
 def test_term_create_rejects_properties_without_kind():
     from pydantic import ValidationError
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     try:
         TermCreate(name="X", definition="d", properties={"foo": "bar"})
@@ -126,7 +118,7 @@ def test_term_create_rejects_properties_without_kind():
 
 
 def test_term_create_allows_free_extra_properties_beyond_kind_schema():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     term = TermCreate(
         name="Alice Smith", definition="A person", kind="Person",
@@ -136,7 +128,7 @@ def test_term_create_allows_free_extra_properties_beyond_kind_schema():
 
 
 def test_term_create_defaults_kind_and_properties_to_none_and_empty():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     term = TermCreate(name="Cash", definition="Money")
     assert term.kind is None
@@ -144,38 +136,40 @@ def test_term_create_defaults_kind_and_properties_to_none_and_empty():
 
 
 def test_create_term_with_kind_adds_matching_label():
-    from app.models.term import TermCreate
-    from app.db import run_query
+    from app.backend.models.term import TermCreate
+    from app.backend.db import run_query
 
     apply_constraints()
     term_service.create_term(
-        TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"})
+        TermCreate(name="Alice Smith", definition="A person", kind="Person", properties={"title": "CFO"}),
+        created_by="admin@corp.com",
     )
 
-    rows = run_query("MATCH (t:Term {name: $name}) RETURN labels(t) AS labels", name="Alice Smith")
-    assert set(rows[0]["labels"]) == {"Term", "Person"}
+    rows = run_query("SELECT kind FROM entities WHERE name = %(name)s", name="Alice Smith")
+    assert rows[0]["kind"] == "Person"
 
 
 def test_create_term_without_kind_has_only_term_label():
-    from app.models.term import TermCreate
-    from app.db import run_query
+    from app.backend.models.term import TermCreate
+    from app.backend.db import run_query
 
     apply_constraints()
-    term_service.create_term(TermCreate(name="Cash", definition="Money"))
+    term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="admin@corp.com")
 
-    rows = run_query("MATCH (t:Term {name: $name}) RETURN labels(t) AS labels", name="Cash")
-    assert rows[0]["labels"] == ["Term"]
+    rows = run_query("SELECT kind FROM entities WHERE name = %(name)s", name="Cash")
+    assert rows[0]["kind"] == "Term"
 
 
 def test_get_term_returns_kind_and_properties():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     apply_constraints()
     term_service.create_term(
         TermCreate(
             name="Alice Smith", definition="A person", kind="Person",
             properties={"title": "CFO", "favorite_color": "teal"},
-        )
+        ),
+        created_by="admin@corp.com",
     )
 
     fetched = term_service.get_term("Alice Smith")
@@ -184,10 +178,10 @@ def test_get_term_returns_kind_and_properties():
 
 
 def test_get_term_without_kind_has_none_kind_and_empty_properties():
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     apply_constraints()
-    term_service.create_term(TermCreate(name="Cash", definition="Money"))
+    term_service.create_term(TermCreate(name="Cash", definition="Money"), created_by="admin@corp.com")
 
     fetched = term_service.get_term("Cash")
     assert fetched.kind is None
@@ -215,7 +209,7 @@ def test_json_api_round_trips_kind_and_properties():
 
 def test_term_create_rejects_properties_colliding_with_reserved_field_names():
     from pydantic import ValidationError
-    from app.models.term import TermCreate
+    from app.backend.models.term import TermCreate
 
     try:
         TermCreate(
@@ -263,9 +257,9 @@ def test_set_category_replaces_existing():
     term_service.set_category("Cash", "Working Capital")
 
     assert term_service.get_term("Cash").category == "Working Capital"
-    from app.db import run_query
+    from app.backend.db import run_query
     rows = run_query(
-        "MATCH (:Term {name: 'Cash'})-[:HAS_CATEGORY]->(c:Category) RETURN c.name AS name"
+        "SELECT c.name FROM entities e JOIN categories c ON c.id = e.category_id WHERE e.name = 'Cash'"
     )
     assert [r["name"] for r in rows] == ["Working Capital"]
 

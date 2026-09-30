@@ -1,10 +1,10 @@
 import pytest
 from starlette.requests import Request
 from fastapi import HTTPException
-from app.dependencies import get_current_user
-from app.services.auth import sync_user
-from app.models.user import Role, UserOut
-from app.web.deps import require_web_role, WebAuthRequired
+from app.backend.dependencies import get_current_user
+from app.backend.services.auth import sync_user
+from app.backend.models.user import Role, UserOut
+from app.ui.deps import require_web_role, WebAuthRequired
 
 
 def _request_with_session(session: dict) -> Request:

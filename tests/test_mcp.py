@@ -1,11 +1,11 @@
 import pytest
 from fastmcp import Client
-from app import mcp_server
-from app.mcp_server import mcp
+from app.mcp import server as mcp_server
+from app.mcp.server import mcp
 from app.main import app as main_app
-from app.config import settings
-from app.schema import apply_constraints
-from app.db import run_query
+from app.backend.config import settings
+from app.backend.schema import apply_constraints
+from app.backend.db import run_query
 
 
 def test_mcp_server_main_runs_http_transport_from_settings(monkeypatch):
@@ -36,7 +36,7 @@ async def test_mcp_get_term_returns_published_only():
     apply_constraints()
     from fastapi.testclient import TestClient
     TestClient(main_app).post("/terms", json={"name": "Cash", "definition": "Tiền mặt"})
-    run_query("MATCH (t:Term {name: 'Cash'}) SET t.status = 'published'")
+    run_query("UPDATE entities SET status = 'published' WHERE name = 'Cash'")
 
     async with Client(mcp) as client:
         tools = await client.list_tools()
@@ -110,7 +110,7 @@ async def test_mcp_search_term_returns_published_only():
     apply_constraints()
     from fastapi.testclient import TestClient
     TestClient(main_app).post("/terms", json={"name": "Cash Reserve", "definition": "money set aside"})
-    run_query("MATCH (t:Term {name: 'Cash Reserve'}) SET t.status = 'published'")
+    run_query("UPDATE entities SET status = 'published' WHERE name = 'Cash Reserve'")
 
     async with Client(mcp) as client:
         tools = await client.list_tools()

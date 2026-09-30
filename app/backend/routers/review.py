@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.services import review as review_service
-from app.models.review import EditSubmit, QueueItem, RejectRequest
-from app.models.user import Role, UserOut
-from app.dependencies import require_role
+from app.backend.services import review as review_service
+from app.backend.models.review import EditSubmit, QueueItem, RejectRequest
+from app.backend.models.user import Role, UserOut
+from app.backend.dependencies import require_role
 
 router = APIRouter(tags=["review"])
 
@@ -21,7 +21,7 @@ def submit_edit(
     name: str, data: EditSubmit, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))
 ):
     try:
-        review_service.submit_edit(name, data)
+        review_service.submit_edit(name, data, author=user.email)
     except review_service.VersionConflict as e:
         raise HTTPException(status_code=409, detail=str(e))
     except LookupError as e:

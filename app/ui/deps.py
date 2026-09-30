@@ -1,6 +1,6 @@
 from fastapi import Request, Depends
-from app.services.auth import get_user
-from app.models.user import Role, UserOut
+from app.backend.services.auth import get_user
+from app.backend.models.user import Role, UserOut
 
 
 class WebAuthRequired(Exception):

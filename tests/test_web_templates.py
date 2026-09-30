@@ -1,5 +1,5 @@
-from app.web.templates import templates
-from app.models.user import Role, UserOut
+from app.ui.templates import templates
+from app.backend.models.user import Role, UserOut
 
 
 def test_nav_shows_sign_in_when_logged_out():

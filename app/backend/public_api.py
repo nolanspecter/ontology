@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Path, Query
-from app.models.term import PublicTermOut, TermSearchResult
-from app.models.relation import RelatedTermOut
-from app.services import terms as term_service
+from app.backend.models.term import PublicTermOut, TermSearchResult
+from app.backend.models.relation import RelatedTermOut
+from app.backend.services import terms as term_service
 
 public_app = FastAPI(title="Ontology — Public")
 
@@ -47,13 +47,18 @@ def search_term(
     q: str = Query(
         min_length=1,
         max_length=200,
-        description="Free-text search phrase — plain words, not a query language (e.g. 'cash flow'). Matched against term names and definitions.",
+        description="Free-text search phrase — plain words, not a query language (e.g. 'cash flow'). Matched against term names, synonyms and definitions; accents optional ('tien mat' finds 'tiền mặt').",
     ),
 ):
     """Search published terms by free text when you don't know a term's
     exact name.
 
-    Ranked by relevance, returns up to 10 {name, score} matches — not full
+    Ranked by BM25 relevance over names, synonyms and definitions (a word
+    rare across the glossary counts more than a common one); if no whole
+    word matches, falls back to fuzzy matching on names to absorb typos.
+    A query that is exactly a term's name or synonym (case and accents
+    aside) ranks that term first.
+    Returns up to 10 {name, score} matches — not full
     term detail. Call get_term with the name you want next.
 
     Input: q (string, required, 1-200 characters) — free-text search phrase.

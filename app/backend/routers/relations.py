@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.models.relation import RelationCreate, RelatedTermOut
-from app.models.user import Role, UserOut
-from app.dependencies import require_role
-from app.services import terms as term_service
+from app.backend.models.relation import RelationCreate, RelatedTermOut
+from app.backend.models.user import Role, UserOut
+from app.backend.dependencies import require_role
+from app.backend.services import terms as term_service
 
 router = APIRouter(prefix="/terms", tags=["relations"])
 

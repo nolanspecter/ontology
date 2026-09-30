@@ -1,15 +1,15 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.schema import apply_constraints
-from app.services import terms as term_service
-from app.services import review as review_service
-from app.web.deps import get_web_user
-from app.models.user import Role, UserOut
+from app.backend.schema import apply_constraints
+from app.backend.services import terms as term_service
+from app.backend.services import review as review_service
+from app.ui.deps import get_web_user
+from app.backend.models.user import Role, UserOut
 
 client = TestClient(app)
 
 
-def _login_as(role, email="u@corp.com"):
+def _login_as(role, email="admin@corp.com"):
     app.dependency_overrides[get_web_user] = lambda: UserOut(email=email, role=role)
 
 

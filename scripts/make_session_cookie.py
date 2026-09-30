@@ -4,7 +4,7 @@ from base64 import b64encode
 
 import itsdangerous
 
-from app.config import settings
+from app.backend.config import settings
 
 
 def make_cookie(email: str) -> str:

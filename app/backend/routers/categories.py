@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.services import terms as term_service
+from app.backend.services import terms as term_service
 
 router = APIRouter(tags=["categories"])
 

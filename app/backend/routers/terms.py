@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.models.term import TermCreate, TermOut, CategoryUpdate
-from app.models.user import Role, UserOut
-from app.dependencies import require_role
-from app.services import terms as term_service
+from app.backend.models.term import TermCreate, TermOut, CategoryUpdate
+from app.backend.models.user import Role, UserOut
+from app.backend.dependencies import require_role
+from app.backend.services import terms as term_service
 
 router = APIRouter(prefix="/terms", tags=["terms"])
 
 
 @router.post("", response_model=TermOut, status_code=201)
 def create_term(data: TermCreate, user: UserOut = Depends(require_role(Role.EDITOR, Role.ADMIN))):
-    return term_service.create_term(data)
+    return term_service.create_term(data, created_by=user.email)
 
 
 @router.get("", response_model=list[TermOut])

@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
-import app.routers.auth as auth_router
-from app.config import settings
+import app.backend.routers.auth as auth_router
+from app.backend.config import settings
 from app.main import app
 
 
